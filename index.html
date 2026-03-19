@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vector로 좌표평면 분석하기</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap');
         body {
@@ -39,9 +40,14 @@
 <body class="p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <header class="mb-8 text-center">
-            <h1 class="text-3xl font-extrabold text-slate-800 mb-2">Vector로 좌표평면 분석하기</h1>
-            <p class="text-slate-500 font-medium">데이터를 분석하고 저장하여 친구들과 공유해 보세요.</p>
+        <header class="mb-8">
+            <div class="flex items-center justify-center gap-4">
+                <div class="text-center">
+                    <h1 class="text-3xl font-extrabold text-slate-800 mb-2">Vector로 좌표평면 분석하기</h1>
+                    <p class="text-slate-500 font-medium">데이터를 분석하고 저장하여 친구들과 공유해 보세요.</p>
+                </div>
+                <div id="qrcode" class="border-2 border-slate-200 shadow-sm rounded-xl overflow-hidden flex-shrink-0"></div>
+            </div>
         </header>
 
         <!-- Main Layout Grid -->
@@ -217,6 +223,9 @@
                 user = u;
                 if (user) setupRealtimeListener();
             });
+        } else {
+            // Firebase 미설정 시 localStorage 목록 즉시 표시
+            setupRealtimeListener();
         }
 
         // --- Functions ---
@@ -403,97 +412,120 @@
             link.click();
         }
 
+        // --- localStorage 기반 저장/불러오기 ---
+        const LOCAL_STORAGE_KEY = 'vector_analysis_saved_plots';
+
+        function getLocalPlots() {
+            try { return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]'); } catch { return []; }
+        }
+
+        function setLocalPlots(plots) {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(plots));
+        }
+
+        function renderSavedList(docs) {
+            const listEl = document.getElementById('savedList');
+            const counterEl = document.getElementById('listCounter');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            if (docs.length === 0) {
+                listEl.innerHTML = '<div class="text-center py-20 text-slate-300 text-sm font-medium italic">등록된 분석 자료가 없습니다.</div>';
+                if (counterEl) counterEl.innerText = "0";
+                return;
+            }
+            if (counterEl) counterEl.innerText = docs.length;
+            docs.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'group p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-white cursor-pointer transition-all shadow-sm flex justify-between items-center';
+
+                const infoEl = document.createElement('div');
+                const titleEl = document.createElement('h4');
+                titleEl.className = 'font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors';
+                titleEl.textContent = item.title;
+                const metaEl = document.createElement('div');
+                metaEl.className = 'flex items-center gap-2 mt-1';
+                const topicEl = document.createElement('span');
+                topicEl.className = 'text-[10px] text-slate-400 font-medium';
+                topicEl.textContent = item.topic;
+                const ptsEl = document.createElement('span');
+                ptsEl.className = 'text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold';
+                ptsEl.textContent = `${item.data.length} pts`;
+                metaEl.appendChild(topicEl);
+                metaEl.appendChild(ptsEl);
+                infoEl.appendChild(titleEl);
+                infoEl.appendChild(metaEl);
+
+                const loadEl = document.createElement('div');
+                loadEl.className = 'opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md';
+                loadEl.textContent = '불러오기';
+
+                div.appendChild(infoEl);
+                div.appendChild(loadEl);
+                div.onclick = () => applyAnalysis(item);
+                listEl.appendChild(div);
+            });
+        }
+
         async function saveToCloud() {
-            if (!db || !user) {
-                alert("클라우드 저장을 사용하려면 Firebase 설정이 필요합니다.");
-                return;
-            }
             const saveTitle = document.getElementById('saveTitle').value.trim();
-            if (!saveTitle) {
-                alert("저장할 분석 이름을 입력해 주세요.");
-                return;
-            }
-            if (dataPoints.length === 0) {
-                alert("데이터가 하나 이상 있어야 저장할 수 있습니다.");
-                return;
-            }
+            if (!saveTitle) { alert("저장할 분석 이름을 입력해 주세요."); return; }
+            if (dataPoints.length === 0) { alert("데이터가 하나 이상 있어야 저장할 수 있습니다."); return; }
 
             const btn = document.getElementById('saveBtn');
             btn.disabled = true;
             btn.innerText = "저장 중...";
 
-            try {
-                const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'saved_plots');
-                const saveData = {
-                    title: saveTitle,
-                    topic: document.getElementById('topic').value,
-                    xName: document.getElementById('xName').value,
-                    xScale: parseFloat(document.getElementById('xScale').value),
-                    yName: document.getElementById('yName').value,
-                    yScale: parseFloat(document.getElementById('yScale').value),
-                    data: dataPoints,
-                    timestamp: serverTimestamp(),
-                    createdBy: user.uid
-                };
-                await addDoc(collectionRef, saveData);
-                alert("성공적으로 저장되었습니다!");
-                document.getElementById('saveTitle').value = "";
-            } catch (error) {
-                console.error("Save failed:", error);
-                alert("저장 중 오류가 발생했습니다.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "저장";
+            const saveData = {
+                id: Date.now().toString(),
+                title: saveTitle,
+                topic: document.getElementById('topic').value,
+                xName: document.getElementById('xName').value,
+                xScale: parseFloat(document.getElementById('xScale').value),
+                yName: document.getElementById('yName').value,
+                yScale: parseFloat(document.getElementById('yScale').value),
+                data: dataPoints,
+                timestamp: { seconds: Math.floor(Date.now() / 1000) }
+            };
+
+            // Firebase 우선, 실패 시 localStorage 폴백
+            let saved = false;
+            if (db && user) {
+                try {
+                    const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'saved_plots');
+                    await addDoc(collectionRef, { ...saveData, timestamp: serverTimestamp(), createdBy: user.uid });
+                    saved = true;
+                } catch (error) {
+                    console.warn("Firebase 저장 실패, localStorage로 저장합니다.", error);
+                }
             }
+
+            if (!saved) {
+                const plots = getLocalPlots();
+                plots.push(saveData);
+                setLocalPlots(plots);
+                const sorted = [...plots].sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                renderSavedList(sorted);
+            }
+
+            alert("성공적으로 저장되었습니다!");
+            document.getElementById('saveTitle').value = "";
+            btn.disabled = false;
+            btn.innerText = "저장";
         }
 
         function setupRealtimeListener() {
-            if (!user || !db) return;
+            if (!user || !db) {
+                // Firebase 없으면 localStorage에서 불러오기
+                const plots = getLocalPlots().sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                renderSavedList(plots);
+                return;
+            }
             const q = collection(db, 'artifacts', appId, 'public', 'data', 'saved_plots');
             onSnapshot(q, (snapshot) => {
-                const listEl = document.getElementById('savedList');
-                const counterEl = document.getElementById('listCounter');
-                if (!listEl) return;
-                listEl.innerHTML = '';
                 const docs = [];
                 snapshot.forEach(docSnap => { docs.push({ id: docSnap.id, ...docSnap.data() }); });
                 docs.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-                if (docs.length === 0) {
-                    listEl.innerHTML = '<div class="text-center py-20 text-slate-300 text-sm font-medium italic">등록된 분석 자료가 없습니다.</div>';
-                    if (counterEl) counterEl.innerText = "0";
-                    return;
-                }
-                if (counterEl) counterEl.innerText = docs.length;
-                docs.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'group p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-white cursor-pointer transition-all shadow-sm flex justify-between items-center';
-
-                    const infoEl = document.createElement('div');
-                    const titleEl = document.createElement('h4');
-                    titleEl.className = 'font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors';
-                    titleEl.textContent = item.title;
-                    const metaEl = document.createElement('div');
-                    metaEl.className = 'flex items-center gap-2 mt-1';
-                    const topicEl = document.createElement('span');
-                    topicEl.className = 'text-[10px] text-slate-400 font-medium';
-                    topicEl.textContent = item.topic;
-                    const ptsEl = document.createElement('span');
-                    ptsEl.className = 'text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold';
-                    ptsEl.textContent = `${item.data.length} pts`;
-                    metaEl.appendChild(topicEl);
-                    metaEl.appendChild(ptsEl);
-                    infoEl.appendChild(titleEl);
-                    infoEl.appendChild(metaEl);
-
-                    const loadEl = document.createElement('div');
-                    loadEl.className = 'opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md';
-                    loadEl.textContent = '불러오기';
-
-                    div.appendChild(infoEl);
-                    div.appendChild(loadEl);
-                    div.onclick = () => applyAnalysis(item);
-                    listEl.appendChild(div);
-                });
+                renderSavedList(docs);
             }, (error) => { console.error("Firestore Error:", error); });
         }
 
@@ -523,7 +555,16 @@
         // 초기 실행
         window.addEventListener('load', () => {
             resizeCanvas();
-            loadSampleData(true); 
+            loadSampleData(true);
+            // QR코드 생성
+            new QRCode(document.getElementById('qrcode'), {
+                text: 'https://vectoranalysis.vercel.app',
+                width: 128,
+                height: 128,
+                colorDark: '#1e293b',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
         });
         window.addEventListener('resize', resizeCanvas);
     </script>
