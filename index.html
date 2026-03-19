@@ -200,6 +200,7 @@
 
         // --- Initialization ---
         setupRealtimeListener();
+        migrateFromLocalStorage();
 
         // --- Functions ---
 
@@ -426,6 +427,35 @@
                 div.onclick = () => applyAnalysis(item);
                 listEl.appendChild(div);
             });
+        }
+
+        async function migrateFromLocalStorage() {
+            const LOCAL_KEY = 'vector_analysis_saved_plots';
+            let plots = [];
+            try { plots = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]'); } catch { return; }
+            if (plots.length === 0) return;
+
+            try {
+                for (const item of plots) {
+                    const saveData = {
+                        title: item.title || '(제목 없음)',
+                        topic: item.topic || '',
+                        xName: item.xName || '',
+                        xScale: item.xScale || 100,
+                        yName: item.yName || '',
+                        yScale: item.yScale || 100,
+                        data: item.data || [],
+                        timestamp: item.timestamp?.seconds
+                            ? item.timestamp.seconds * 1000
+                            : (item.timestamp || Date.now())
+                    };
+                    await push(dbRef(db, 'vector_analysis/saved_plots'), saveData);
+                }
+                localStorage.removeItem(LOCAL_KEY);
+                console.log(`localStorage 데이터 ${plots.length}건 Firebase로 마이그레이션 완료`);
+            } catch (e) {
+                console.error('마이그레이션 실패:', e);
+            }
         }
 
         async function saveToCloud() {
