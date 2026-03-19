@@ -176,13 +176,21 @@
         import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Configuration ---
-        const firebaseConfig = (typeof __firebase_config !== 'undefined')
-            ? JSON.parse(__firebase_config)
-            : {};
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        let app = null, auth = null, db = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'vector-analysis-app';
+
+        try {
+            const firebaseConfig = (typeof __firebase_config !== 'undefined')
+                ? JSON.parse(__firebase_config)
+                : null;
+            if (firebaseConfig && firebaseConfig.apiKey) {
+                app  = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db   = getFirestore(app);
+            }
+        } catch (e) {
+            console.warn("Firebase 초기화 실패 — 클라우드 기능을 사용할 수 없습니다.", e);
+        }
 
         // --- Application State ---
         let dataPoints = [];
@@ -191,26 +199,25 @@
         const ctx = canvas.getContext('2d');
 
         // --- Initialization ---
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+        if (auth) {
+            const initAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Auth Error:", error);
                 }
-            } catch (error) {
-                console.error("Auth Error:", error);
-            }
-        };
+            };
+            initAuth();
 
-        initAuth();
-
-        onAuthStateChanged(auth, (u) => {
-            user = u;
-            if (user) {
-                setupRealtimeListener();
-            }
-        });
+            onAuthStateChanged(auth, (u) => {
+                user = u;
+                if (user) setupRealtimeListener();
+            });
+        }
 
         // --- Functions ---
 
@@ -397,8 +404,8 @@
         }
 
         async function saveToCloud() {
-            if (!user) {
-                alert("인증 정보가 없습니다. 다시 로드해 주세요.");
+            if (!db || !user) {
+                alert("클라우드 저장을 사용하려면 Firebase 설정이 필요합니다.");
                 return;
             }
             const saveTitle = document.getElementById('saveTitle').value.trim();
@@ -441,7 +448,7 @@
         }
 
         function setupRealtimeListener() {
-            if (!user) return;
+            if (!user || !db) return;
             const q = collection(db, 'artifacts', appId, 'public', 'data', 'saved_plots');
             onSnapshot(q, (snapshot) => {
                 const listEl = document.getElementById('savedList');
