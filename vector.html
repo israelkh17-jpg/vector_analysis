@@ -41,9 +41,15 @@
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
         <header class="mb-8">
-            <div class="flex items-center justify-center gap-4">
-                <div class="text-center">
-                    <h1 class="text-3xl font-extrabold text-slate-800 mb-2">Vector로 좌표평면 분석하기</h1>
+            <div class="flex items-center justify-center gap-4 flex-wrap">
+                <div class="text-center flex-1 min-w-0">
+                    <div class="flex items-center justify-center gap-3 mb-2">
+                        <a href="index.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-full text-sm font-semibold transition-all flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            홈으로
+                        </a>
+                        <h1 class="text-3xl font-extrabold text-slate-800">Vector로 좌표평면 분석하기</h1>
+                    </div>
                     <p class="text-slate-500 font-medium">데이터를 분석하고 저장하여 친구들과 공유해 보세요.</p>
                 </div>
                 <div id="qrcode" class="border-2 border-slate-200 shadow-sm rounded-xl overflow-hidden flex-shrink-0"></div>
@@ -177,7 +183,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref as dbRef, push, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        import { getDatabase, ref as dbRef, push, onValue, remove } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
         // --- Firebase Configuration (vibecoding-exe 프로젝트, vector_analysis 전용 경로 사용) ---
         const firebaseConfig = {
@@ -399,32 +405,56 @@
             if (counterEl) counterEl.innerText = docs.length;
             docs.forEach(item => {
                 const div = document.createElement('div');
-                div.className = 'group p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-white cursor-pointer transition-all shadow-sm flex justify-between items-center';
+                div.className = 'group p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-white transition-all shadow-sm flex justify-between items-center gap-2';
 
+                // 정보 영역 (클릭 → 불러오기)
                 const infoEl = document.createElement('div');
+                infoEl.className = 'flex-1 min-w-0 cursor-pointer';
                 const titleEl = document.createElement('h4');
-                titleEl.className = 'font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors';
+                titleEl.className = 'font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors truncate';
                 titleEl.textContent = item.title;
                 const metaEl = document.createElement('div');
                 metaEl.className = 'flex items-center gap-2 mt-1';
                 const topicEl = document.createElement('span');
-                topicEl.className = 'text-[10px] text-slate-400 font-medium';
+                topicEl.className = 'text-[10px] text-slate-400 font-medium truncate';
                 topicEl.textContent = item.topic;
                 const ptsEl = document.createElement('span');
-                ptsEl.className = 'text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold';
+                ptsEl.className = 'text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0';
                 ptsEl.textContent = `${item.data.length} pts`;
                 metaEl.appendChild(topicEl);
                 metaEl.appendChild(ptsEl);
                 infoEl.appendChild(titleEl);
                 infoEl.appendChild(metaEl);
+                infoEl.onclick = () => applyAnalysis(item);
 
-                const loadEl = document.createElement('div');
-                loadEl.className = 'opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md';
+                // 액션 버튼 묶음
+                const actionsEl = document.createElement('div');
+                actionsEl.className = 'flex items-center gap-1.5 flex-shrink-0';
+
+                const loadEl = document.createElement('button');
+                loadEl.className = 'opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md';
                 loadEl.textContent = '불러오기';
+                loadEl.onclick = () => applyAnalysis(item);
 
+                const delEl = document.createElement('button');
+                delEl.className = 'opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-600 text-[10px] font-bold px-2 py-1.5 rounded-lg border border-red-200';
+                delEl.title = '삭제';
+                delEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+                delEl.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`'${item.title}' 을(를) 삭제하시겠습니까?`)) return;
+                    try {
+                        await remove(dbRef(db, `vector_analysis/saved_plots/${item.id}`));
+                    } catch (err) {
+                        console.error('삭제 실패:', err);
+                        alert('삭제 중 오류가 발생했습니다.');
+                    }
+                };
+
+                actionsEl.appendChild(loadEl);
+                actionsEl.appendChild(delEl);
                 div.appendChild(infoEl);
-                div.appendChild(loadEl);
-                div.onclick = () => applyAnalysis(item);
+                div.appendChild(actionsEl);
                 listEl.appendChild(div);
             });
         }
