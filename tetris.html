@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Tetris - Luxury Edition</title>
+    <style>
+        :root {
+            --bg-color: #020617;
+            --panel-bg: rgba(15, 23, 42, 0.8);
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.4);
+            --text: #f8fafc;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-weight: 200;
+            letter-spacing: 12px;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-home {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-home:hover { color: #fff; border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); }
+
+        .game-layout {
+            display: flex;
+            gap: 40px;
+            padding: 40px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            border: 1px solid var(--border);
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .board-container {
+            position: relative;
+            border: 4px solid #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        canvas#tetris {
+            display: block;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 8px;
+            transition: opacity 0.3s ease;
+        }
+
+        .overlay.hidden { opacity: 0; pointer-events: none; }
+
+        .btn-start {
+            padding: 16px 48px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: white;
+            background: var(--accent);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 20px var(--accent-glow);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-start:hover { transform: scale(1.05); box-shadow: 0 0 30px var(--accent); }
+
+        .game-over-text {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: #ef4444;
+            letter-spacing: 4px;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            width: 160px;
+        }
+
+        .widget {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .label {
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        canvas#next { margin-top: 5px; background: transparent; }
+
+        .controls-info {
+            margin-top: auto;
+            font-size: 0.75rem;
+            color: #64748b;
+            line-height: 2;
+        }
+
+        .controls-info b { color: #94a3b8; margin-right: 8px; }
+
+        .sound-toggle {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: none;
+            border: 1px solid var(--border);
+            color: #64748b;
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sound-toggle.active { color: var(--accent); border-color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html" class="btn-home">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            홈으로
+        </a>
+        <h1>TETRIS</h1>
+    </div>
+
+    <div class="game-layout">
+        <button id="soundToggle" class="sound-toggle active" title="Music On/Off">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+        </button>
+
+        <div class="board-container">
+            <canvas id="tetris" width="240" height="400"></canvas>
+            <div id="startOverlay" class="overlay">
+                <button class="btn-start" onclick="startGame()">Start Game</button>
+            </div>
+            <div id="gameOverOverlay" class="overlay hidden">
+                <div class="game-over-text">GAME OVER</div>
+                <button class="btn-start" onclick="startGame()">Try Again</button>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="widget">
+                <div class="label">Next</div>
+                <canvas id="next" width="80" height="80"></canvas>
+            </div>
+            <div class="widget">
+                <div class="label">Score</div>
+                <div id="score" class="value">0</div>
+            </div>
+            <div class="widget">
+                <div class="label">Lines</div>
+                <div id="lines" class="value">0</div>
+            </div>
+            <div class="controls-info">
+                <div><b>↑</b> Rotate</div>
+                <div><b>← →</b> Move</div>
+                <div><b>↓</b> Soft Drop</div>
+                <div><b>Space</b> Hard Drop</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    class SoundEngine {
+        constructor() {
+            this.ctx = null;
+            this.isPlaying = false;
+            this.muted = false;
+            this.tempo = 120;
+            this.melody = [
+                ['E4', 4], ['B3', 8], ['C4', 8], ['D4', 4], ['C4', 8], ['B3', 8],
+                ['A3', 4], ['A3', 8], ['C4', 8], ['E4', 4], ['D4', 8], ['C4', 8],
+                ['B3', 4.5], ['C4', 8], ['D4', 4], ['E4', 4],
+                ['C4', 4], ['A3', 4], ['A3', 4], [null, 4],
+                ['D4', 3], ['F4', 8], ['A4', 4], ['G4', 8], ['F4', 8],
+                ['E4', 3], ['C4', 8], ['E4', 4], ['D4', 8], ['C4', 8],
+                ['B3', 4], ['B3', 8], ['C4', 8], ['D4', 4], ['E4', 4],
+                ['C4', 4], ['A3', 4], ['A3', 4], [null, 4]
+            ];
+            this.noteMap = {
+                'A3': 220.00, 'B3': 246.94, 'C4': 261.63, 'D4': 293.66,
+                'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00
+            };
+            this.noteIndex = 0;
+        }
+        init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+        playMelody() {
+            if (this.muted || !this.isPlaying) return;
+            const noteData = this.melody[this.noteIndex];
+            const freq = this.noteMap[noteData[0]];
+            const duration = (60 / this.tempo) * (4 / noteData[1]);
+            if (freq) {
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                g.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+                osc.connect(g); g.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + duration);
+            }
+            this.noteIndex = (this.noteIndex + 1) % this.melody.length;
+            this.timeout = setTimeout(() => this.playMelody(), duration * 1000);
+        }
+        start() { this.init(); this.isPlaying = true; this.noteIndex = 0; this.playMelody(); }
+        stop() { this.isPlaying = false; clearTimeout(this.timeout); }
+        toggleMute() {
+            this.muted = !this.muted;
+            if (!this.muted && this.isPlaying) this.playMelody();
+            return this.muted;
+        }
+    }
+
+    const sound = new SoundEngine();
+    const canvas = document.getElementById('tetris');
+    const context = canvas.getContext('2d');
+    const nextCanvas = document.getElementById('next');
+    const nextContext = nextCanvas.getContext('2d');
+
+    context.scale(20, 20);
+    nextContext.scale(20, 20);
+
+    const colors = [null, '#f43f5e', '#10b981', '#3b82f6', '#f59e0b', '#f97316', '#06b6d4', '#8b5cf6'];
+
+    function createPiece(type) {
+        if (type === 'I') return [[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]];
+        if (type === 'L') return [[0,2,0],[0,2,0],[0,2,2]];
+        if (type === 'J') return [[0,3,0],[0,3,0],[3,3,0]];
+        if (type === 'O') return [[4,4],[4,4]];
+        if (type === 'Z') return [[5,5,0],[0,5,5],[0,0,0]];
+        if (type === 'S') return [[0,6,6],[6,6,0],[0,0,0]];
+        if (type === 'T') return [[0,7,0],[7,7,7],[0,0,0]];
+    }
+
+    const arena = Array.from({length: 20}, () => Array(12).fill(0));
+    const player = { pos: {x: 0, y: 0}, matrix: null, next: null, score: 0, lines: 0 };
+    let isPaused = true;
+
+    function playerReset() {
+        const pieces = 'TJLOSZI';
+        if (!player.next) player.next = createPiece(pieces[pieces.length * Math.random() | 0]);
+        player.matrix = player.next;
+        player.next = createPiece(pieces[pieces.length * Math.random() | 0]);
+        player.pos.y = 0;
+        player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+        if (collide(arena, player)) gameOver();
+    }
+
+    function collide(arena, player) {
+        const [m, o] = [player.matrix, player.pos];
+        if (!m) return false;
+        for (let y = 0; y < m.length; ++y)
+            for (let x = 0; x < m[y].length; ++x)
+                if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true;
+        return false;
+    }
+
+    function merge(arena, player) {
+        player.matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value;
+            });
+        });
+    }
+
+    function rotate(matrix, dir) {
+        for (let y = 0; y < matrix.length; ++y)
+            for (let x = 0; x < y; ++x)
+                [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+        if (dir > 0) matrix.forEach(row => row.reverse()); else matrix.reverse();
+    }
+
+    function arenaSweep() {
+        let rowCount = 1;
+        for (let y = arena.length - 1; y > 0; --y) {
+            if (arena[y].every(value => value !== 0)) {
+                const row = arena.splice(y, 1)[0].fill(0);
+                arena.unshift(row);
+                ++y;
+                player.score += rowCount * 10;
+                player.lines++;
+                rowCount *= 2;
+            }
+        }
+        document.getElementById('score').innerText = player.score;
+        document.getElementById('lines').innerText = player.lines;
+    }
+
+    function drawMatrix(matrix, offset, ctx, isGhost = false) {
+        if (!matrix) return;
+        matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    ctx.fillStyle = isGhost ? 'rgba(255,255,255,0.1)' : colors[value];
+                    ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+                    if (!isGhost) {
+                        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                        ctx.lineWidth = 0.05;
+                        ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
+                    }
+                }
+            });
+        });
+    }
+
+    function draw() {
+        context.fillStyle = '#000';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.strokeStyle = 'rgba(255,255,255,0.03)';
+        context.lineWidth = 0.02;
+        for (let i = 0; i < 12; i++) context.strokeRect(i, 0, 0.1, 20);
+        for (let i = 0; i < 20; i++) context.strokeRect(0, i, 12, 0.1);
+        drawMatrix(arena, {x: 0, y: 0}, context);
+        if (player.matrix) drawMatrix(player.matrix, player.pos, context);
+        nextContext.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+        if (player.next) {
+            const nPos = {x: 1, y: 1};
+            if (player.next.length === 2) nPos.x = 1.5;
+            drawMatrix(player.next, nPos, nextContext);
+        }
+    }
+
+    let dropCounter = 0, dropInterval = 1000, lastTime = 0;
+
+    function update(time = 0) {
+        if (isPaused) return;
+        const deltaTime = time - lastTime;
+        lastTime = time;
+        dropCounter += deltaTime;
+        if (dropCounter > dropInterval) playerDrop();
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    function playerDrop() {
+        player.pos.y++;
+        if (collide(arena, player)) { player.pos.y--; merge(arena, player); playerReset(); arenaSweep(); }
+        dropCounter = 0;
+    }
+
+    function startGame() {
+        document.getElementById('startOverlay').classList.add('hidden');
+        document.getElementById('gameOverOverlay').classList.add('hidden');
+        arena.forEach(row => row.fill(0));
+        player.score = 0; player.lines = 0; player.next = null;
+        document.getElementById('score').innerText = 0;
+        document.getElementById('lines').innerText = 0;
+        playerReset();
+        isPaused = false;
+        lastTime = performance.now();
+        update();
+        sound.start();
+    }
+
+    function gameOver() {
+        isPaused = true;
+        sound.stop();
+        document.getElementById('gameOverOverlay').classList.remove('hidden');
+    }
+
+    document.addEventListener('keydown', event => {
+        if (isPaused) return;
+        if (event.keyCode === 37) { player.pos.x--; if (collide(arena, player)) player.pos.x++; }
+        if (event.keyCode === 39) { player.pos.x++; if (collide(arena, player)) player.pos.x--; }
+        if (event.keyCode === 40) playerDrop();
+        if (event.keyCode === 38) {
+            const pos = player.pos.x;
+            rotate(player.matrix, 1);
+            if (collide(arena, player)) { rotate(player.matrix, -1); player.pos.x = pos; }
+        }
+        if (event.keyCode === 32) {
+            event.preventDefault();
+            while (!collide(arena, player)) player.pos.y++;
+            player.pos.y--;
+            playerDrop();
+        }
+    });
+
+    document.getElementById('soundToggle').addEventListener('click', () => {
+        const isMuted = sound.toggleMute();
+        document.getElementById('soundToggle').classList.toggle('active', !isMuted);
+    });
+
+    draw();
+</script>
+</body>
+</html>

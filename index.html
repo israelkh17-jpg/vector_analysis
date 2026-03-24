@@ -3,554 +3,318 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vector로 좌표평면 분석하기</title>
+    <title>Flying Physics - Interactive Learning</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap');
+
         body {
+            background-color: #020617;
             font-family: 'Pretendard', sans-serif;
-            background-color: #f8fafc;
+            color: #f8fafc;
         }
-        .canvas-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+
+        .glass-morphism {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+
+        .hero-gradient {
+            background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.15), transparent),
+                        radial-gradient(circle at bottom left, rgba(244, 114, 182, 0.1), transparent);
         }
-        .data-row:nth-child(even) {
-            background-color: #f1f5f9;
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #38bdf8;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
         }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: #cbd5e1;
-            border-radius: 3px;
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="max-w-7xl mx-auto">
-        <!-- Header -->
-        <header class="mb-8">
-            <div class="flex items-center justify-center gap-4">
-                <div class="text-center">
-                    <h1 class="text-3xl font-extrabold text-slate-800 mb-2">Vector로 좌표평면 분석하기</h1>
-                    <p class="text-slate-500 font-medium">데이터를 분석하고 저장하여 친구들과 공유해 보세요.</p>
-                </div>
-                <div id="qrcode" class="border-2 border-slate-200 shadow-sm rounded-xl overflow-hidden flex-shrink-0"></div>
-            </div>
-        </header>
+<body>
+    <div id="root"></div>
 
-        <!-- Main Layout Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            
-            <!-- Left Column: Input & Controls -->
-            <div class="space-y-6">
-                <!-- 1. 주제 및 성분 설정 -->
-                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-blue-700">
-                        <span class="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-mono">1</span>
-                        분석 환경 설정
-                    </h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">분석 주제</label>
-                            <input type="text" id="topic" value="삼국지 인물 분석" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-all" oninput="window.draw()">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">x성분 이름</label>
-                                <input type="text" id="xName" value="전투력" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" oninput="window.draw()">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">x 최대치</label>
-                                <input type="number" id="xScale" value="100" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" oninput="window.draw()">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">y성분 이름</label>
-                                <input type="text" id="yName" value="지력" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" oninput="window.draw()">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">y 최대치</label>
-                                <input type="number" id="yScale" value="100" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" oninput="window.draw()">
-                            </div>
-                        </div>
-                    </div>
-                </section>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-                <!-- 2. 자료 입력하기 -->
-                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-blue-700">
-                        <span class="bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-mono">2</span>
-                        데이터 입력
-                    </h2>
-                    <div class="grid grid-cols-3 gap-2 mb-4">
-                        <input type="text" id="inputLabel" placeholder="이름 (예: 관우)" class="col-span-3 px-3 py-2 border border-slate-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500" onkeydown="if(event.key==='Enter') window.addData()">
-                        <input type="number" id="inputX" placeholder="X값" class="px-3 py-2 border border-slate-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500" onkeydown="if(event.key==='Enter') window.addData()">
-                        <input type="number" id="inputY" placeholder="Y값" class="px-3 py-2 border border-slate-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500" onkeydown="if(event.key==='Enter') window.addData()">
-                        <button onclick="window.addData()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-bold transition-all shadow-sm">추가</button>
-                    </div>
+        // --- Icons ---
+        const IconAtom = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 21.5c4.7 0 8.5-3.8 8.5-8.5s-3.8-8.5-8.5-8.5S3.5 8.3 3.5 13s3.8 8.5 8.5 8.5z" opacity=".2"/>
+                <path d="M12 2v2"/><path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/><path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+        );
 
-                    <div class="max-h-60 overflow-y-auto border border-slate-200 rounded-lg custom-scrollbar">
-                        <table class="w-full text-xs text-left">
-                            <thead class="bg-slate-50 text-slate-600 sticky top-0">
-                                <tr>
-                                    <th class="px-3 py-2">이름</th>
-                                    <th class="px-3 py-2 text-center">X</th>
-                                    <th class="px-3 py-2 text-center">Y</th>
-                                    <th class="px-3 py-2 text-right">삭제</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dataTable"></tbody>
-                        </table>
-                    </div>
-                    <div class="flex justify-between items-center mt-3">
-                        <div class="flex gap-2">
-                            <button onclick="window.loadSampleData()" class="text-[11px] bg-slate-100 hover:bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 font-bold transition-all">
-                                삼국지 예시 불러오기
-                            </button>
-                            <span id="counter" class="text-xs text-slate-400 font-medium flex items-center uppercase tracking-tighter">TOTAL: 0</span>
-                        </div>
-                        <button onclick="window.clearData()" class="text-xs text-red-400 hover:text-red-600 transition-colors font-semibold">전체 삭제</button>
-                    </div>
-                </section>
+        const IconHome = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+        );
 
-                <!-- 3. 저장 및 공유 -->
-                <section class="bg-blue-50 p-6 rounded-xl shadow-sm border border-blue-100">
-                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-blue-800">
-                        <span class="bg-blue-800 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-mono">3</span>
-                        클라우드 저장하기
-                    </h2>
-                    <div class="flex gap-2">
-                        <input type="text" id="saveTitle" placeholder="저장 이름 (예: 홍길동_분석)" class="flex-1 px-3 py-2 border border-blue-200 rounded-md outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        <button id="saveBtn" onclick="window.saveToCloud()" class="bg-blue-800 text-white px-4 py-2 rounded-md font-bold text-sm hover:bg-blue-900 transition-all flex items-center gap-1 whitespace-nowrap">
-                            저장
-                        </button>
-                    </div>
-                </section>
-            </div>
+        // --- App ---
+        const App = () => {
+            const [currentView, setCurrentView] = useState('home');
 
-            <!-- Right Column: Visualization & Saved List -->
-            <div class="space-y-6">
-                <!-- Visualization Section -->
-                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h2 class="text-lg font-bold mb-4 flex items-center justify-between text-slate-800">
-                        <span>좌표평면 시각화</span>
-                        <button onclick="window.downloadCanvas()" class="text-xs px-3 py-1 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-all font-semibold uppercase">
-                            이미지로 저장
-                        </button>
-                    </h2>
-                    <div id="canvasWrapper" class="canvas-container bg-slate-50 border border-slate-100">
-                        <canvas id="plotCanvas"></canvas>
-                    </div>
-                    <p class="text-[10px] text-slate-400 text-center uppercase tracking-[0.2em] mt-4 font-bold">Analysis Preview</p>
-                </section>
-
-                <!-- Saved List Section -->
-                <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[400px]">
-                    <h2 class="text-lg font-bold mb-4 flex items-center justify-between text-slate-800">
-                        <span>저장된 목록</span>
-                        <span id="listCounter" class="text-xs bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full font-mono">...</span>
-                    </h2>
-                    <div id="savedList" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar max-h-[500px]">
-                        <div class="text-center py-20 text-slate-300 text-sm">
-                            목록을 불러오고 있습니다...
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref as dbRef, push, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-
-        // --- Firebase Configuration (vibecoding-exe 프로젝트, vector_analysis 전용 경로 사용) ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyA5eHVCK10DSzzN_zgP7Pfi143k_7kJdyQ",
-            authDomain: "vibecoding-exe.firebaseapp.com",
-            projectId: "vibecoding-exe",
-            storageBucket: "vibecoding-exe.firebasestorage.app",
-            messagingSenderId: "318705619437",
-            appId: "1:318705619437:web:7fa6afce34fe50ccce17e4",
-            databaseURL: "https://vibecoding-exe-default-rtdb.asia-southeast1.firebasedatabase.app"
+            if (currentView === 'circle') return <CircleLabView onBack={() => setCurrentView('home')} />;
+            return <HomeView onNavigate={setCurrentView} />;
         };
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        // ※ 저장 경로: vector_analysis/saved_plots — memojjang의 memos/ 경로와 완전히 분리됨
 
-        // --- Application State ---
-        let dataPoints = [];
-        const canvas = document.getElementById('plotCanvas');
-        const ctx = canvas.getContext('2d');
+        // --- Home View ---
+        const HomeView = ({ onNavigate }) => (
+            <div className="min-h-screen hero-gradient flex flex-col items-center justify-center p-6 text-center">
+                <div className="animate-float mb-8">
+                    <IconAtom />
+                </div>
+                <h1 className="text-5xl md:text-7xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-pink-500">
+                    Flying Physics
+                </h1>
+                <p className="text-slate-300 text-lg md:text-xl max-w-2xl mb-12 leading-relaxed">
+                    동북고등학교 물리학 학습사이트입니다.<br/>
+                    상호작용하는 시뮬레이션을 통해 물리학을 체험해 보세요.
+                </p>
 
-        // --- Initialization ---
-        setupRealtimeListener();
-        migrateFromLocalStorage();
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl w-full">
 
-        // --- Functions ---
+                    {/* 카드 1: 원형·리사주 궤적 */}
+                    <div
+                        onClick={() => onNavigate('circle')}
+                        className="glass-morphism p-8 rounded-3xl group cursor-pointer hover:border-sky-400/50 transition-all duration-300 hover:scale-105"
+                    >
+                        <div className="w-16 h-16 bg-sky-500/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-sky-500/20 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 2a10 10 0 0 1 10 10"/>
+                            </svg>
+                        </div>
+                        <h3 className="text-2xl font-bold mb-3 group-hover:text-sky-400 transition-colors">원형 및 리사주 궤적</h3>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                            sin·cos 함수의 합성을 통해 원, 타원, 그리고 복잡한 리사주 도형을 실시간으로 시각화합니다.
+                        </p>
+                        <div className="mt-6 flex items-center text-sky-400 font-semibold text-sm">
+                            실험 시작하기 <span className="ml-2 group-hover:translate-x-2 transition-transform inline-block">→</span>
+                        </div>
+                    </div>
 
-        function resizeCanvas() {
-            const wrapper = document.getElementById('canvasWrapper');
-            if (!wrapper) return;
-            canvas.width = wrapper.clientWidth * window.devicePixelRatio;
-            canvas.height = wrapper.clientHeight * window.devicePixelRatio;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-            draw();
-        }
+                    {/* 카드 2: 벡터로 좌표평면 분석하기 */}
+                    <a href="vector.html" className="no-underline">
+                        <div className="glass-morphism p-8 rounded-3xl group cursor-pointer hover:border-pink-400/50 transition-all duration-300 hover:scale-105 h-full">
+                            <div className="w-16 h-16 bg-pink-500/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-pink-500/20 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
+                                    <line x1="4" y1="14" x2="24" y2="14" stroke="#f472b6" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <line x1="14" y1="4" x2="14" y2="24" stroke="#f472b6" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <circle cx="8"  cy="20" r="2.2" fill="#f43f5e"/>
+                                    <circle cx="13" cy="10" r="2.2" fill="#a78bfa"/>
+                                    <circle cx="20" cy="8"  r="2.2" fill="#38bdf8"/>
+                                    <circle cx="22" cy="18" r="2.2" fill="#34d399"/>
+                                </svg>
+                            </div>
+                            <h3 className="text-2xl font-bold mb-3 group-hover:text-pink-400 transition-colors">Vector로 좌표평면 분석하기</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                데이터를 좌표평면에 직접 올리고 분석하세요. 결과는 클라우드에 저장하고 친구들과 공유할 수 있습니다.
+                            </p>
+                            <div className="mt-6 flex items-center text-pink-400 font-semibold text-sm">
+                                실습 시작하기 <span className="ml-2 group-hover:translate-x-2 transition-transform inline-block">→</span>
+                            </div>
+                        </div>
+                    </a>
 
-        function addData() {
-            const label = document.getElementById('inputLabel').value.trim();
-            const x = parseFloat(document.getElementById('inputX').value);
-            const y = parseFloat(document.getElementById('inputY').value);
+                    {/* 카드 3: 테트리스 즐기기 */}
+                    <a href="tetris.html" className="no-underline">
+                        <div className="glass-morphism p-8 rounded-3xl group cursor-pointer hover:border-emerald-400/50 transition-all duration-300 hover:scale-105 h-full">
+                            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
+                                    <rect x="4"  y="4"  width="8" height="8" rx="2" fill="#10b981" opacity="0.9"/>
+                                    <rect x="16" y="4"  width="8" height="8" rx="2" fill="#3b82f6" opacity="0.9"/>
+                                    <rect x="4"  y="16" width="8" height="8" rx="2" fill="#f59e0b" opacity="0.9"/>
+                                    <rect x="16" y="16" width="8" height="8" rx="2" fill="#f43f5e" opacity="0.9"/>
+                                </svg>
+                            </div>
+                            <h3 className="text-2xl font-bold mb-3 group-hover:text-emerald-400 transition-colors">테트리스 즐기기</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                클래식 테트리스를 즐겨 보세요. 코로베이니키 배경음악과 함께하는 프리미엄 에디션입니다.
+                            </p>
+                            <div className="mt-6 flex items-center text-emerald-400 font-semibold text-sm">
+                                게임 시작하기 <span className="ml-2 group-hover:translate-x-2 transition-transform inline-block">→</span>
+                            </div>
+                        </div>
+                    </a>
 
-            if (!label || isNaN(x) || isNaN(y)) return;
+                </div>
 
-            dataPoints.push({ label, x, y, color: getRandomColor() });
-            
-            document.getElementById('inputLabel').value = '';
-            document.getElementById('inputX').value = '';
-            document.getElementById('inputY').value = '';
-            document.getElementById('inputLabel').focus();
+                <footer className="mt-20 text-slate-500 text-sm border-t border-slate-800 pt-8 w-full max-w-4xl">
+                    &copy; 2024 Flying Physics @ Dongbuk High School. Designed for Learning.
+                </footer>
+            </div>
+        );
 
-            renderTable();
-            draw();
-        }
-
-        function deleteData(index) {
-            dataPoints.splice(index, 1);
-            renderTable();
-            draw();
-        }
-
-        function clearData() {
-            if(!confirm("모든 데이터를 삭제하시겠습니까?")) return;
-            dataPoints = [];
-            renderTable();
-            draw();
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('dataTable');
-            const counter = document.getElementById('counter');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-            
-            dataPoints.forEach((p, index) => {
-                const tr = document.createElement('tr');
-                tr.className = 'data-row border-b border-slate-100';
-                tr.innerHTML = `
-                    <td class="px-3 py-2 font-medium">${p.label}</td>
-                    <td class="px-3 py-2 text-center text-slate-500">${p.x}</td>
-                    <td class="px-3 py-2 text-center text-slate-500">${p.y}</td>
-                    <td class="px-3 py-2 text-right">
-                        <button onclick="window.deleteData(${index})" class="text-red-300 hover:text-red-500 transition-colors">✕</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+        // --- Circle Lab View ---
+        const CircleLabView = ({ onBack }) => {
+            const [params, setParams] = useState({
+                freqX: 1, freqY: 1,
+                radiusX: 120, radiusY: 120,
+                speed: 0.02, phase: 0,
+                trailLength: 400, showComponents: true,
             });
-            if (counter) counter.innerText = `TOTAL: ${dataPoints.length}`;
-        }
+            const [isPlaying, setIsPlaying] = useState(true);
+            const [time, setTime] = useState(0);
+            const [points, setPoints] = useState([]);
+            const canvasRef = useRef(null);
+            const requestRef = useRef();
 
-        function draw() {
-            if (!canvas) return;
-            const width = canvas.width / window.devicePixelRatio;
-            const height = canvas.height / window.devicePixelRatio;
-            const padding = 50;
-            const plotWidth = width - padding * 2;
-            const plotHeight = height - padding * 2;
-
-            const topic = document.getElementById('topic').value;
-            const xName = document.getElementById('xName').value;
-            const yName = document.getElementById('yName').value;
-            const xScale = parseFloat(document.getElementById('xScale').value) || 100;
-            const yScale = parseFloat(document.getElementById('yScale').value) || 100;
-
-            ctx.clearRect(0, 0, width, height);
-
-            // 가이드라인
-            ctx.strokeStyle = '#f1f5f9';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for(let i=0; i<=10; i++) {
-                let yPos = padding + (plotHeight * (1 - i/10));
-                ctx.moveTo(padding, yPos);
-                ctx.lineTo(padding + plotWidth, yPos);
-                let xPos = padding + (plotWidth * (i/10));
-                ctx.moveTo(xPos, padding);
-                ctx.lineTo(xPos, padding + plotHeight);
-            }
-            ctx.stroke();
-
-            // 축
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(padding, padding);
-            ctx.lineTo(padding, padding + plotHeight);
-            ctx.lineTo(padding + plotWidth, padding + plotHeight);
-            ctx.stroke();
-
-            // 텍스트 라벨
-            ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 16px Pretendard';
-            ctx.textAlign = 'center';
-            ctx.fillText(topic, width/2, padding - 20);
-            
-            ctx.font = 'bold 12px Pretendard';
-            ctx.fillText(xName, padding + plotWidth/2, padding + plotHeight + 40);
-            
-            ctx.save();
-            ctx.translate(padding - 35, padding + plotHeight/2);
-            ctx.rotate(-Math.PI/2);
-            ctx.fillText(yName, 0, 0);
-            ctx.restore();
-
-            // 스케일 수치
-            ctx.font = '10px Pretendard';
-            ctx.fillStyle = '#94a3b8';
-            ctx.textAlign = 'right';
-            ctx.fillText('0', padding - 8, padding + plotHeight + 5);
-            ctx.fillText(yScale, padding - 8, padding + 5);
-            ctx.textAlign = 'center';
-            ctx.fillText(xScale, padding + plotWidth, padding + plotHeight + 15);
-
-            // 데이터 포인트
-            dataPoints.forEach(p => {
-                const px = padding + (Math.min(p.x, xScale) / xScale) * plotWidth;
-                const py = padding + (1 - Math.min(p.y, yScale) / yScale) * plotHeight;
-
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.arc(px, py, 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                ctx.fillStyle = '#334155';
-                ctx.font = 'bold 11px Pretendard';
-                ctx.textAlign = 'left';
-                ctx.fillText(` ${p.label}`, px + 8, py + 4);
-            });
-        }
-
-        function getRandomColor() {
-            const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
-            return colors[Math.floor(Math.random() * colors.length)];
-        }
-
-        function loadSampleData(isInitial = false) {
-            if (!isInitial && dataPoints.length > 0 && !confirm("현재 입력된 데이터가 사라집니다. 예시 데이터를 불러올까요?")) return;
-            
-            document.getElementById('topic').value = "삼국지 인물 분석";
-            document.getElementById('xName').value = "전투력";
-            document.getElementById('xScale').value = 100;
-            document.getElementById('yName').value = "지력";
-            document.getElementById('yScale').value = 100;
-
-            dataPoints = [
-                { label: '관우', x: 98, y: 82, color: '#f43f5e' },
-                { label: '장비', x: 99, y: 30, color: '#3b82f6' },
-                { label: '유비', x: 75, y: 80, color: '#10b981' },
-                { label: '조조', x: 82, y: 92, color: '#f59e0b' },
-                { label: '제갈량', x: 38, y: 100, color: '#8b5cf6' },
-                { label: '주유', x: 80, y: 95, color: '#ec4899' },
-                { label: '조운', x: 96, y: 75, color: '#06b6d4' },
-                { label: '허저', x: 94, y: 20, color: '#f43f5e' },
-                { label: '방통', x: 30, y: 98, color: '#3b82f6' },
-                { label: '손권', x: 70, y: 78, color: '#10b981' }
-            ];
-            renderTable();
-            draw();
-        }
-
-        function downloadCanvas() {
-            const link = document.createElement('a');
-            link.download = `분석_${document.getElementById('topic').value}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
-
-        function renderSavedList(docs) {
-            const listEl = document.getElementById('savedList');
-            const counterEl = document.getElementById('listCounter');
-            if (!listEl) return;
-            listEl.innerHTML = '';
-            if (docs.length === 0) {
-                listEl.innerHTML = '<div class="text-center py-20 text-slate-300 text-sm font-medium italic">등록된 분석 자료가 없습니다.</div>';
-                if (counterEl) counterEl.innerText = "0";
-                return;
-            }
-            if (counterEl) counterEl.innerText = docs.length;
-            docs.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'group p-4 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-white cursor-pointer transition-all shadow-sm flex justify-between items-center';
-
-                const infoEl = document.createElement('div');
-                const titleEl = document.createElement('h4');
-                titleEl.className = 'font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors';
-                titleEl.textContent = item.title;
-                const metaEl = document.createElement('div');
-                metaEl.className = 'flex items-center gap-2 mt-1';
-                const topicEl = document.createElement('span');
-                topicEl.className = 'text-[10px] text-slate-400 font-medium';
-                topicEl.textContent = item.topic;
-                const ptsEl = document.createElement('span');
-                ptsEl.className = 'text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold';
-                ptsEl.textContent = `${item.data.length} pts`;
-                metaEl.appendChild(topicEl);
-                metaEl.appendChild(ptsEl);
-                infoEl.appendChild(titleEl);
-                infoEl.appendChild(metaEl);
-
-                const loadEl = document.createElement('div');
-                loadEl.className = 'opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md';
-                loadEl.textContent = '불러오기';
-
-                div.appendChild(infoEl);
-                div.appendChild(loadEl);
-                div.onclick = () => applyAnalysis(item);
-                listEl.appendChild(div);
-            });
-        }
-
-        async function migrateFromLocalStorage() {
-            const LOCAL_KEY = 'vector_analysis_saved_plots';
-            let plots = [];
-            try { plots = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]'); } catch { return; }
-            if (plots.length === 0) return;
-
-            try {
-                for (const item of plots) {
-                    const saveData = {
-                        title: item.title || '(제목 없음)',
-                        topic: item.topic || '',
-                        xName: item.xName || '',
-                        xScale: item.xScale || 100,
-                        yName: item.yName || '',
-                        yScale: item.yScale || 100,
-                        data: item.data || [],
-                        timestamp: item.timestamp?.seconds
-                            ? item.timestamp.seconds * 1000
-                            : (item.timestamp || Date.now())
-                    };
-                    await push(dbRef(db, 'vector_analysis/saved_plots'), saveData);
-                }
-                localStorage.removeItem(LOCAL_KEY);
-                console.log(`localStorage 데이터 ${plots.length}건 Firebase로 마이그레이션 완료`);
-            } catch (e) {
-                console.error('마이그레이션 실패:', e);
-            }
-        }
-
-        async function saveToCloud() {
-            const saveTitle = document.getElementById('saveTitle').value.trim();
-            if (!saveTitle) { alert("저장할 분석 이름을 입력해 주세요."); return; }
-            if (dataPoints.length === 0) { alert("데이터가 하나 이상 있어야 저장할 수 있습니다."); return; }
-
-            const btn = document.getElementById('saveBtn');
-            btn.disabled = true;
-            btn.innerText = "저장 중...";
-
-            const saveData = {
-                title: saveTitle,
-                topic: document.getElementById('topic').value,
-                xName: document.getElementById('xName').value,
-                xScale: parseFloat(document.getElementById('xScale').value),
-                yName: document.getElementById('yName').value,
-                yScale: parseFloat(document.getElementById('yScale').value),
-                data: dataPoints,
-                timestamp: Date.now()
+            const animate = () => {
+                if (isPlaying) setTime((prev) => prev + params.speed);
+                requestRef.current = requestAnimationFrame(animate);
             };
 
-            try {
-                // vector_analysis/saved_plots 경로에만 저장 — memos/ 경로와 완전히 분리
-                await push(dbRef(db, 'vector_analysis/saved_plots'), saveData);
-                alert("성공적으로 저장되었습니다!");
-                document.getElementById('saveTitle').value = "";
-            } catch (error) {
-                console.error("저장 실패:", error);
-                alert("저장 중 오류가 발생했습니다.");
-            }
+            useEffect(() => {
+                requestRef.current = requestAnimationFrame(animate);
+                return () => cancelAnimationFrame(requestRef.current);
+            }, [isPlaying, params.speed]);
 
-            btn.disabled = false;
-            btn.innerText = "저장";
-        }
+            useEffect(() => {
+                const x = Math.cos(time * params.freqX + params.phase) * params.radiusX;
+                const y = Math.sin(time * params.freqY) * params.radiusY;
+                setPoints((prev) => {
+                    const next = [...prev, { x, y }];
+                    return next.length > params.trailLength ? next.slice(-params.trailLength) : next;
+                });
+            }, [time, params]);
 
-        function setupRealtimeListener() {
-            // vector_analysis/saved_plots 경로만 구독 — memos/ 경로에 영향 없음
-            onValue(dbRef(db, 'vector_analysis/saved_plots'), (snapshot) => {
-                const docs = [];
-                if (snapshot.exists()) {
-                    snapshot.forEach(child => {
-                        const item = child.val();
-                        // Realtime DB는 배열을 객체로 저장하므로 변환
-                        if (item.data && !Array.isArray(item.data)) {
-                            item.data = Object.values(item.data);
-                        }
-                        docs.push({ id: child.key, ...item });
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const { width, height } = canvas;
+                const cx = width / 2, cy = height / 2;
+
+                ctx.clearRect(0, 0, width, height);
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, cy); ctx.lineTo(width, cy);
+                ctx.moveTo(cx, 0); ctx.lineTo(cx, height);
+                ctx.stroke();
+
+                if (points.length > 1) {
+                    ctx.lineWidth = 2.5;
+                    points.forEach((p, i) => {
+                        if (i === 0) return;
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${i / points.length})`;
+                        ctx.beginPath();
+                        ctx.moveTo(cx + points[i-1].x, cy + points[i-1].y);
+                        ctx.lineTo(cx + p.x, cy + p.y);
+                        ctx.stroke();
                     });
                 }
-                docs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                renderSavedList(docs);
-            }, (error) => {
-                console.error("Firebase 읽기 오류:", error);
-            });
-        }
 
-        function applyAnalysis(item) {
-            if(!confirm(`'${item.title}' 데이터를 불러오시겠습니까?\n현재 작성 중인 내용은 사라집니다.`)) return;
-            document.getElementById('topic').value = item.topic || "";
-            document.getElementById('xName').value = item.xName || "";
-            document.getElementById('xScale').value = item.xScale || 100;
-            document.getElementById('yName').value = item.yName || "";
-            document.getElementById('yScale').value = item.yScale || 100;
-            dataPoints = item.data || [];
-            renderTable();
-            draw();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+                if (points.length > 0) {
+                    const current = points[points.length - 1];
+                    if (params.showComponents) {
+                        const xInd = { x: cx + current.x, y: 60 };
+                        const yInd = { x: width - 60, y: cy + current.y };
+                        ctx.setLineDash([5, 5]);
+                        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(xInd.x, xInd.y); ctx.lineTo(cx + current.x, cy + current.y);
+                        ctx.moveTo(yInd.x, yInd.y); ctx.lineTo(cx + current.x, cy + current.y);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.arc(xInd.x, xInd.y, 6, 0, Math.PI*2); ctx.fill();
+                        ctx.fillStyle = '#f472b6'; ctx.beginPath(); ctx.arc(yInd.x, yInd.y, 6, 0, Math.PI*2); ctx.fill();
+                    }
+                    ctx.fillStyle = '#fff'; ctx.shadowBlur = 15; ctx.shadowColor = '#38bdf8';
+                    ctx.beginPath(); ctx.arc(cx + current.x, cy + current.y, 8, 0, Math.PI*2); ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }, [points, params]);
 
-        // --- Functions Exposed to Window (중요: HTML 인라인 onclick에서 접근 가능하도록) ---
-        window.addData = addData;
-        window.deleteData = deleteData;
-        window.clearData = clearData;
-        window.draw = draw;
-        window.downloadCanvas = downloadCanvas;
-        window.saveToCloud = saveToCloud;
-        window.applyAnalysis = applyAnalysis;
-        window.loadSampleData = loadSampleData;
+            const handleParam = (k, v) => {
+                setParams(p => ({ ...p, [k]: parseFloat(v) }));
+                if (['freqX', 'freqY', 'phase', 'radiusX', 'radiusY'].includes(k)) setPoints([]);
+            };
 
-        // 초기 실행
-        window.addEventListener('load', () => {
-            resizeCanvas();
-            loadSampleData(true);
-            // QR코드 생성
-            new QRCode(document.getElementById('qrcode'), {
-                text: 'https://vectoranalysis.vercel.app',
-                width: 128,
-                height: 128,
-                colorDark: '#1e293b',
-                colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.M
-            });
-        });
-        window.addEventListener('resize', resizeCanvas);
+            return (
+                <div className="flex flex-col md:flex-row h-screen bg-slate-950 overflow-hidden">
+                    <div className="w-full md:w-80 p-6 bg-slate-900 border-r border-slate-800 flex flex-col gap-6 overflow-y-auto">
+                        <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-2 group">
+                            <IconHome />
+                            <span className="font-medium">홈으로 돌아가기</span>
+                        </button>
+
+                        <div className="space-y-5">
+                            <h2 className="text-xl font-bold text-sky-400 border-b border-slate-800 pb-2">실험 설정</h2>
+                            <Control label="X축 진폭 (Rx)" val={params.radiusX} min="0" max="250" color="sky" onChange={v => handleParam('radiusX', v)} />
+                            <Control label="Y축 진폭 (Ry)" val={params.radiusY} min="0" max="250" color="pink" onChange={v => handleParam('radiusY', v)} />
+                            <Control label="X축 진동수" val={params.freqX} min="0.1" max="10" step="0.1" color="sky" unit="Hz" onChange={v => handleParam('freqX', v)} />
+                            <Control label="Y축 진동수" val={params.freqY} min="0.1" max="10" step="0.1" color="pink" unit="Hz" onChange={v => handleParam('freqY', v)} />
+                            <Control label="위상차" val={(params.phase / Math.PI).toFixed(2)} min="0" max={Math.PI * 2} step="0.01" color="slate" unit="π" onChange={v => handleParam('phase', v)} />
+                            <label className="flex items-center gap-3 cursor-pointer mt-2">
+                                <input type="checkbox" checked={params.showComponents} onChange={(e) => handleParam('showComponents', e.target.checked)} className="w-4 h-4 rounded border-slate-700 text-sky-500 bg-slate-800"/>
+                                <span className="text-sm text-slate-300">성분 분석 모드</span>
+                            </label>
+                        </div>
+
+                        <div className="mt-auto flex gap-2 pt-4">
+                            <button onClick={() => setIsPlaying(!isPlaying)} className={`flex-1 py-3 rounded-xl font-bold transition-all ${isPlaying ? 'bg-amber-600 hover:bg-amber-500' : 'bg-emerald-600 hover:bg-emerald-500'}`}>
+                                {isPlaying ? '일시정지' : '재생'}
+                            </button>
+                            <button onClick={() => { setPoints([]); setTime(0); }} className="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                                    <path d="M21 3v5h-5"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 flex items-center justify-center p-8">
+                        <div className="w-full h-full max-w-2xl max-h-2xl aspect-square glass-morphism rounded-3xl overflow-hidden relative shadow-2xl">
+                            <canvas ref={canvasRef} width={700} height={700} className="w-full h-full" />
+                            <div className="absolute top-4 left-4 bg-slate-900/50 backdrop-blur px-3 py-1 rounded-full text-[10px] text-slate-400 font-mono">
+                                REALTIME TRAJECTORY SIMULATION
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Control = ({ label, val, min, max, step = "1", color, unit = "", onChange }) => (
+            <section>
+                <div className="flex justify-between mb-2 text-sm font-medium">
+                    <label className="text-slate-400">{label}</label>
+                    <span className={`text-${color}-400 font-mono`}>{val}{unit}</span>
+                </div>
+                <input type="range" min={min} max={max} step={step} value={val}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer" />
+            </section>
+        );
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
