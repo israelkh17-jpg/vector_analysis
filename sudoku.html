@@ -68,13 +68,29 @@
 
         .game-layout {
             display: flex;
-            gap: 32px;
+            flex-direction: column;
+            gap: 20px;
             padding: 36px 40px;
             background: var(--panel-bg);
             backdrop-filter: blur(20px);
             border-radius: 32px;
             border: 1px solid var(--border);
             box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.5);
+        }
+
+        .top-area {
+            display: flex;
+            gap: 32px;
+        }
+
+        .bottom-row {
+            display: flex;
+            gap: 16px;
+        }
+
+        .bottom-row .widget {
+            flex: 1;
+            margin-bottom: 0;
         }
 
         /* ---- Board ---- */
@@ -246,11 +262,11 @@
         .btn-newgame:hover { transform: scale(1.03); box-shadow: 0 0 20px var(--accent-glow); }
 
         .controls-info {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             color: #64748b;
-            line-height: 2;
+            line-height: 2.2;
         }
-        .controls-info b { color: #94a3b8; margin-right: 6px; }
+        .controls-info b { color: #94a3b8; margin-right: 8px; }
 
         .legend {
             font-size: 0.7rem;
@@ -294,53 +310,59 @@
 
     <div class="game-layout">
 
-        <!-- Board -->
-        <div class="board-wrapper">
-            <div id="sudokuGrid" class="sudoku-grid"></div>
-            <div id="winOverlay" class="win-overlay">
-                <div class="win-title">완성!</div>
-                <div class="win-time" id="winTime"></div>
-                <div id="newRecordBadge" class="win-record" style="display:none;">🏆 NEW RECORD!</div>
-                <button class="btn-start-win" onclick="newGame()">다시 하기</button>
+        <!-- 상단: 보드 + 사이드바 -->
+        <div class="top-area">
+
+            <!-- Board -->
+            <div class="board-wrapper">
+                <div id="sudokuGrid" class="sudoku-grid"></div>
+                <div id="winOverlay" class="win-overlay">
+                    <div class="win-title">완성!</div>
+                    <div class="win-time" id="winTime"></div>
+                    <div id="newRecordBadge" class="win-record" style="display:none;">🏆 NEW RECORD!</div>
+                    <button class="btn-start-win" onclick="newGame()">다시 하기</button>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="widget">
+                    <div class="label">난이도</div>
+                    <div class="diff-buttons">
+                        <button class="btn-diff active" id="diff-easy"   onclick="setDifficulty('easy')">쉬움</button>
+                        <button class="btn-diff"        id="diff-medium" onclick="setDifficulty('medium')">보통</button>
+                        <button class="btn-diff"        id="diff-hard"   onclick="setDifficulty('hard')">어려움</button>
+                    </div>
+                </div>
+
+                <div class="widget">
+                    <div class="stats-row">
+                        <div class="stat-item">
+                            <div class="stat-value" id="timerDisplay">00:00</div>
+                            <div class="stat-label">시간</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="errorsDisplay" style="color:#ef4444;">0</div>
+                            <div class="stat-label">오류</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="widget">
+                    <div class="label">숫자 입력</div>
+                    <div class="numpad" id="numpad"></div>
+                </div>
+
+                <button class="btn-newgame" onclick="newGame()">새 게임</button>
             </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="sidebar">
-
-            <div class="widget">
-                <div class="label">난이도</div>
-                <div class="diff-buttons">
-                    <button class="btn-diff active" id="diff-easy"   onclick="setDifficulty('easy')">쉬움</button>
-                    <button class="btn-diff"        id="diff-medium" onclick="setDifficulty('medium')">보통</button>
-                    <button class="btn-diff"        id="diff-hard"   onclick="setDifficulty('hard')">어려움</button>
-                </div>
-            </div>
-
-            <div class="widget">
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <div class="stat-value" id="timerDisplay">00:00</div>
-                        <div class="stat-label">시간</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="errorsDisplay" style="color:#ef4444;">0</div>
-                        <div class="stat-label">오류</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="widget">
-                <div class="label">숫자 입력</div>
-                <div class="numpad" id="numpad"></div>
-            </div>
-
+        <!-- 하단: 최고기록 / 색상안내 / 키보드 안내 -->
+        <div class="bottom-row">
             <div class="widget">
                 <div class="label">최고 기록</div>
                 <ul class="best-list" id="bestList"></ul>
             </div>
-
-            <button class="btn-newgame" onclick="newGame()">새 게임</button>
 
             <div class="widget">
                 <div class="label">색상 안내</div>
@@ -351,12 +373,16 @@
                 </div>
             </div>
 
-            <div class="controls-info">
-                <div><b>1-9</b> 숫자 입력</div>
-                <div><b>↑↓←→</b> 셀 이동</div>
-                <div><b>Del</b> 지우기</div>
+            <div class="widget">
+                <div class="label">키보드 단축키</div>
+                <div class="controls-info">
+                    <div><b>1-9</b> 숫자 입력</div>
+                    <div><b>↑↓←→</b> 셀 이동</div>
+                    <div><b>Del</b> 지우기</div>
+                </div>
             </div>
         </div>
+
     </div>
 
 <script>
