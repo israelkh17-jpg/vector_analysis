@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Sudoku</title>
+    <style>
+        :root {
+            --bg-color: #020617;
+            --panel-bg: rgba(15, 23, 42, 0.8);
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.4);
+            --text: #f8fafc;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+        }
+
+        .header {
+            margin-bottom: 1.5rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-weight: 200;
+            letter-spacing: 12px;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-home {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-home:hover { color: #fff; border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); }
+
+        .game-layout {
+            display: flex;
+            gap: 32px;
+            padding: 36px 40px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            border: 1px solid var(--border);
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ---- Board ---- */
+        .board-wrapper {
+            position: relative;
+        }
+
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 52px);
+            grid-template-rows: repeat(9, 52px);
+            border: 3px solid rgba(255,255,255,0.4);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .cell {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 700;
+            cursor: pointer;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: background 0.1s;
+            user-select: none;
+        }
+
+        .cell.box-right  { border-right:  3px solid rgba(255,255,255,0.35); }
+        .cell.box-bottom { border-bottom: 3px solid rgba(255,255,255,0.35); }
+
+        .cell.given { color: #f8fafc; }
+        .cell.user  { color: var(--accent); }
+        .cell.error { color: #ef4444 !important; }
+
+        .cell.selected    { background: rgba(56,189,248,0.28) !important; }
+        .cell.highlighted { background: rgba(56,189,248,0.07); }
+        .cell.same-num    { background: rgba(56,189,248,0.18); }
+        .cell:hover:not(.selected) { background: rgba(255,255,255,0.05); }
+
+        /* ---- Win overlay ---- */
+        .win-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(2,6,23,0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            z-index: 10;
+            gap: 14px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s;
+        }
+        .win-overlay.show { opacity: 1; pointer-events: all; }
+        .win-title { font-size: 2rem; font-weight: 800; color: #f59e0b; letter-spacing: 4px; }
+        .win-time  { font-size: 1.3rem; color: var(--accent); font-weight: 700; }
+        .win-record { font-size: 0.8rem; font-weight: 700; letter-spacing: 3px; color: #f59e0b; animation: pulse 1s infinite alternate; }
+        @keyframes pulse { from { opacity: 0.6; } to { opacity: 1; } }
+
+        /* ---- Sidebar ---- */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            width: 168px;
+        }
+
+        .widget {
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .label {
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            color: #94a3b8;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .diff-buttons { display: flex; flex-direction: column; gap: 6px; }
+        .btn-diff {
+            padding: 8px 0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.03);
+            color: #64748b;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 1px;
+        }
+        .btn-diff:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+        .btn-diff.active { background: var(--accent); color: #020617; border-color: var(--accent); }
+
+        .stats-row { display: flex; justify-content: space-between; gap: 8px; }
+        .stat-item { text-align: center; flex: 1; }
+        .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+        .stat-label { font-size: 0.62rem; color: #64748b; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+        .btn-num {
+            padding: 10px 0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            color: #e2e8f0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-num:hover { background: rgba(56,189,248,0.2); border-color: var(--accent); color: var(--accent); }
+        .btn-erase {
+            grid-column: span 3;
+            padding: 9px 0;
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 10px;
+            background: rgba(239,68,68,0.06);
+            color: #ef4444;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            letter-spacing: 1px;
+        }
+        .btn-erase:hover { background: rgba(239,68,68,0.18); border-color: #ef4444; }
+
+        .best-list { list-style: none; }
+        .best-list li {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: #94a3b8;
+        }
+        .best-list li:last-child { border-bottom: none; }
+        .best-list .time-val { color: var(--accent); font-weight: 700; }
+
+        .btn-newgame {
+            width: 100%;
+            padding: 12px 0;
+            border: none;
+            border-radius: 12px;
+            background: var(--accent);
+            color: #020617;
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .btn-newgame:hover { transform: scale(1.03); box-shadow: 0 0 20px var(--accent-glow); }
+
+        .controls-info {
+            font-size: 0.7rem;
+            color: #64748b;
+            line-height: 2;
+        }
+        .controls-info b { color: #94a3b8; margin-right: 6px; }
+
+        .btn-start-win {
+            padding: 14px 40px;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #020617;
+            background: var(--accent);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 20px var(--accent-glow);
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .btn-start-win:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="index.html" class="btn-home">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            홈으로
+        </a>
+        <h1>SUDOKU</h1>
+    </div>
+
+    <div class="game-layout">
+
+        <!-- Board -->
+        <div class="board-wrapper">
+            <div id="sudokuGrid" class="sudoku-grid"></div>
+            <div id="winOverlay" class="win-overlay">
+                <div class="win-title">완성!</div>
+                <div class="win-time" id="winTime"></div>
+                <div id="newRecordBadge" class="win-record" style="display:none;">🏆 NEW RECORD!</div>
+                <button class="btn-start-win" onclick="newGame()">다시 하기</button>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+
+            <div class="widget">
+                <div class="label">난이도</div>
+                <div class="diff-buttons">
+                    <button class="btn-diff active" id="diff-easy"   onclick="setDifficulty('easy')">쉬움</button>
+                    <button class="btn-diff"        id="diff-medium" onclick="setDifficulty('medium')">보통</button>
+                    <button class="btn-diff"        id="diff-hard"   onclick="setDifficulty('hard')">어려움</button>
+                </div>
+            </div>
+
+            <div class="widget">
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value" id="timerDisplay">00:00</div>
+                        <div class="stat-label">시간</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="errorsDisplay" style="color:#ef4444;">0</div>
+                        <div class="stat-label">오류</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="widget">
+                <div class="label">숫자 입력</div>
+                <div class="numpad" id="numpad"></div>
+            </div>
+
+            <div class="widget">
+                <div class="label">최고 기록</div>
+                <ul class="best-list" id="bestList"></ul>
+            </div>
+
+            <button class="btn-newgame" onclick="newGame()">새 게임</button>
+
+            <div class="controls-info">
+                <div><b>1-9</b> 숫자 입력</div>
+                <div><b>↑↓←→</b> 셀 이동</div>
+                <div><b>Del</b> 지우기</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // ---- State ----
+    let solution = [], puzzle = [], board = [];
+    let selected = null;
+    let difficulty = 'easy';
+    let timerInterval = null, elapsedSeconds = 0, errors = 0, gameActive = false;
+
+    const REMOVE = { easy: 36, medium: 46, hard: 54 };
+    const DIFF_KO = { easy: '쉬움', medium: '보통', hard: '어려움' };
+
+    // ---- Sudoku Generator ----
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function canPlace(b, r, c, n) {
+        if (b[r].includes(n)) return false;
+        for (let i = 0; i < 9; i++) if (b[i][c] === n) return false;
+        const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+        for (let i = br; i < br + 3; i++)
+            for (let j = bc; j < bc + 3; j++)
+                if (b[i][j] === n) return false;
+        return true;
+    }
+
+    function fillBoard(b) {
+        for (let i = 0; i < 81; i++) {
+            const r = Math.floor(i / 9), c = i % 9;
+            if (b[r][c] === 0) {
+                for (const n of shuffle([1,2,3,4,5,6,7,8,9])) {
+                    if (canPlace(b, r, c, n)) {
+                        b[r][c] = n;
+                        if (fillBoard(b)) return true;
+                        b[r][c] = 0;
+                    }
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function generatePuzzle(removeCount) {
+        const b = Array.from({length: 9}, () => Array(9).fill(0));
+        fillBoard(b);
+        const sol = b.map(row => [...row]);
+        const positions = shuffle([...Array(81).keys()]);
+        for (let i = 0; i < removeCount; i++) {
+            const r = Math.floor(positions[i] / 9), c = positions[i] % 9;
+            b[r][c] = 0;
+        }
+        return { solution: sol, puzzle: b };
+    }
+
+    // ---- Game Logic ----
+    function newGame() {
+        document.getElementById('winOverlay').classList.remove('show');
+        const gen = generatePuzzle(REMOVE[difficulty]);
+        solution = gen.solution;
+        puzzle   = gen.puzzle.map(row => [...row]);
+        board    = gen.puzzle.map(row => [...row]);
+        selected = null; errors = 0; elapsedSeconds = 0; gameActive = true;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => { elapsedSeconds++; updateTimer(); }, 1000);
+        updateTimer(); updateErrors(); renderBoard();
+    }
+
+    function setDifficulty(d) {
+        difficulty = d;
+        document.querySelectorAll('.btn-diff').forEach(b => b.classList.remove('active'));
+        document.getElementById('diff-' + d).classList.add('active');
+        newGame();
+    }
+
+    function inputNumber(n) {
+        if (!selected || !gameActive) return;
+        const { r, c } = selected;
+        if (puzzle[r][c] !== 0) return;
+        if (n === 0) {
+            board[r][c] = 0;
+        } else {
+            board[r][c] = n;
+            if (n !== solution[r][c]) { errors++; updateErrors(); }
+        }
+        renderBoard();
+        checkWin();
+    }
+
+    function checkWin() {
+        for (let r = 0; r < 9; r++)
+            for (let c = 0; c < 9; c++)
+                if (board[r][c] !== solution[r][c]) return;
+        gameActive = false;
+        clearInterval(timerInterval);
+        document.getElementById('winTime').textContent = formatTime(elapsedSeconds);
+        const isRecord = saveBestTime(difficulty, elapsedSeconds);
+        document.getElementById('newRecordBadge').style.display = isRecord ? 'block' : 'none';
+        document.getElementById('winOverlay').classList.add('show');
+        renderBestList();
+    }
+
+    // ---- Best Times ----
+    function loadBest() {
+        try { return JSON.parse(localStorage.getItem('sudoku_best') || '{}'); } catch { return {}; }
+    }
+
+    function saveBestTime(d, secs) {
+        const best = loadBest();
+        if (!best[d] || secs < best[d]) {
+            best[d] = secs;
+            localStorage.setItem('sudoku_best', JSON.stringify(best));
+            return true;
+        }
+        return false;
+    }
+
+    function renderBestList() {
+        const best = loadBest();
+        document.getElementById('bestList').innerHTML =
+            ['easy', 'medium', 'hard'].map(d =>
+                `<li><span>${DIFF_KO[d]}</span><span class="time-val">${best[d] ? formatTime(best[d]) : '-'}</span></li>`
+            ).join('');
+    }
+
+    function formatTime(s) {
+        return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+    }
+    function updateTimer()  { document.getElementById('timerDisplay').textContent = formatTime(elapsedSeconds); }
+    function updateErrors() { document.getElementById('errorsDisplay').textContent = errors; }
+
+    // ---- Render Board ----
+    function renderBoard() {
+        const grid = document.getElementById('sudokuGrid');
+        grid.innerHTML = '';
+        const sr = selected ? selected.r : -1, sc = selected ? selected.c : -1;
+        const selVal = (sr >= 0 && board[sr][sc] !== 0) ? board[sr][sc] : -1;
+
+        for (let r = 0; r < 9; r++) {
+            for (let c = 0; c < 9; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (c === 2 || c === 5) cell.classList.add('box-right');
+                if (r === 2 || r === 5) cell.classList.add('box-bottom');
+
+                if (sr >= 0) {
+                    const isSel = r === sr && c === sc;
+                    const inBox = Math.floor(r/3) === Math.floor(sr/3) && Math.floor(c/3) === Math.floor(sc/3);
+                    if (isSel) cell.classList.add('selected');
+                    else if (!isSel && selVal !== -1 && board[r][c] === selVal) cell.classList.add('same-num');
+                    else if (r === sr || c === sc || inBox) cell.classList.add('highlighted');
+                }
+
+                const v = board[r][c];
+                if (v !== 0) {
+                    cell.textContent = v;
+                    if (puzzle[r][c] !== 0) cell.classList.add('given');
+                    else {
+                        cell.classList.add('user');
+                        if (v !== solution[r][c]) cell.classList.add('error');
+                    }
+                }
+
+                const _r = r, _c = c;
+                cell.addEventListener('click', () => { selected = {r:_r, c:_c}; renderBoard(); });
+                grid.appendChild(cell);
+            }
+        }
+    }
+
+    // ---- Build Numpad ----
+    function buildNumpad() {
+        const pad = document.getElementById('numpad');
+        for (let i = 1; i <= 9; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-num';
+            btn.textContent = i;
+            btn.addEventListener('click', () => inputNumber(i));
+            pad.appendChild(btn);
+        }
+        const erase = document.createElement('button');
+        erase.className = 'btn-erase';
+        erase.textContent = '지우기';
+        erase.addEventListener('click', () => inputNumber(0));
+        pad.appendChild(erase);
+    }
+
+    // ---- Keyboard ----
+    document.addEventListener('keydown', e => {
+        if (!gameActive) return;
+        if (e.key >= '1' && e.key <= '9') { inputNumber(parseInt(e.key)); return; }
+        if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') { inputNumber(0); return; }
+        if (!selected) return;
+        const { r, c } = selected;
+        const moves = { ArrowUp:[-1,0], ArrowDown:[1,0], ArrowLeft:[0,-1], ArrowRight:[0,1] };
+        if (moves[e.key]) {
+            e.preventDefault();
+            const [dr, dc] = moves[e.key];
+            const nr = Math.max(0, Math.min(8, r+dr)), nc = Math.max(0, Math.min(8, c+dc));
+            selected = {r:nr, c:nc}; renderBoard();
+        }
+    });
+
+    // ---- Init ----
+    buildNumpad();
+    renderBestList();
+    newGame();
+</script>
+</body>
+</html>
