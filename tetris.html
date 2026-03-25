@@ -185,6 +185,91 @@
         }
 
         .sound-toggle.active { color: var(--accent); border-color: var(--accent); }
+
+        .score-input-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            width: 100%;
+            padding: 0 30px;
+        }
+
+        .new-record-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: #f59e0b;
+            text-transform: uppercase;
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse { from { opacity: 0.6; } to { opacity: 1; } }
+
+        .score-input-area input {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 10px 16px;
+            text-align: center;
+            width: 100%;
+            outline: none;
+            letter-spacing: 2px;
+        }
+
+        .score-input-area input::placeholder { color: #475569; }
+
+        .btn-register {
+            padding: 10px 32px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #020617;
+            background: var(--accent);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .btn-register:hover { transform: scale(1.05); }
+
+        .high-scores-list {
+            list-style: none;
+            width: 100%;
+            font-size: 0.75rem;
+        }
+
+        .high-scores-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: #94a3b8;
+        }
+
+        .high-scores-list li:last-child { border-bottom: none; }
+
+        .high-scores-list li.top1 { color: #f59e0b; font-weight: 700; }
+        .high-scores-list li.top2 { color: #94a3b8; font-weight: 600; }
+        .high-scores-list li.top3 { color: #cd7c2f; font-weight: 600; }
+
+        .hs-rank { width: 20px; font-size: 0.65rem; opacity: 0.6; }
+        .hs-name { flex: 1; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hs-score { color: var(--accent); font-weight: 700; font-size: 0.8rem; }
+
+        .final-score-display {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
     </style>
 </head>
 <body>
@@ -209,7 +294,13 @@
             </div>
             <div id="gameOverOverlay" class="overlay hidden">
                 <div class="game-over-text">GAME OVER</div>
-                <button class="btn-start" onclick="startGame()">Try Again</button>
+                <div class="final-score-display" id="finalScore">0</div>
+                <div id="scoreInputArea" class="score-input-area" style="display:none;">
+                    <div class="new-record-badge">🏆 New Record!</div>
+                    <input id="playerNameInput" type="text" maxlength="10" placeholder="이름 입력" autocomplete="off" />
+                    <button class="btn-register" onclick="registerScore()">등록</button>
+                </div>
+                <button class="btn-start" id="tryAgainBtn" onclick="startGame()">Try Again</button>
             </div>
         </div>
 
@@ -225,6 +316,10 @@
             <div class="widget">
                 <div class="label">Lines</div>
                 <div id="lines" class="value">0</div>
+            </div>
+            <div class="widget">
+                <div class="label">Best</div>
+                <ul id="highScoreList" class="high-scores-list"></ul>
             </div>
             <div class="controls-info">
                 <div><b>↑</b> Rotate</div>
@@ -427,11 +522,76 @@
         sound.start();
     }
 
+    // --- High Score System ---
+    const MAX_SCORES = 5;
+
+    function loadHighScores() {
+        try { return JSON.parse(localStorage.getItem('tetris_highscores') || '[]'); }
+        catch(e) { return []; }
+    }
+
+    function saveHighScores(scores) {
+        localStorage.setItem('tetris_highscores', JSON.stringify(scores));
+    }
+
+    function isHighScore(score) {
+        if (score <= 0) return false;
+        const scores = loadHighScores();
+        return scores.length < MAX_SCORES || score > scores[scores.length - 1].score;
+    }
+
+    function addHighScore(name, score) {
+        const scores = loadHighScores();
+        scores.push({ name: name.trim() || 'PLAYER', score });
+        scores.sort((a, b) => b.score - a.score);
+        scores.splice(MAX_SCORES);
+        saveHighScores(scores);
+        renderHighScores();
+    }
+
+    function renderHighScores() {
+        const scores = loadHighScores();
+        const list = document.getElementById('highScoreList');
+        const rankLabels = ['🥇', '🥈', '🥉', '4', '5'];
+        const rankClasses = ['top1', 'top2', 'top3', '', ''];
+        list.innerHTML = scores.length === 0
+            ? '<li style="color:#475569;font-size:0.7rem;">아직 기록 없음</li>'
+            : scores.map((s, i) => `<li class="${rankClasses[i]}">
+                <span class="hs-rank">${rankLabels[i]}</span>
+                <span class="hs-name">${s.name}</span>
+                <span class="hs-score">${s.score.toLocaleString()}</span>
+              </li>`).join('');
+    }
+
+    function registerScore() {
+        const name = document.getElementById('playerNameInput').value;
+        addHighScore(name, player.score);
+        document.getElementById('scoreInputArea').style.display = 'none';
+        document.getElementById('tryAgainBtn').style.display = '';
+    }
+
     function gameOver() {
         isPaused = true;
         sound.stop();
+        document.getElementById('finalScore').innerText = player.score.toLocaleString() + ' pts';
+        const inputArea = document.getElementById('scoreInputArea');
+        const tryBtn = document.getElementById('tryAgainBtn');
+        if (isHighScore(player.score)) {
+            inputArea.style.display = 'flex';
+            tryBtn.style.display = 'none';
+            const input = document.getElementById('playerNameInput');
+            input.value = '';
+            setTimeout(() => input.focus(), 200);
+        } else {
+            inputArea.style.display = 'none';
+            tryBtn.style.display = '';
+        }
         document.getElementById('gameOverOverlay').classList.remove('hidden');
     }
+
+    document.getElementById('playerNameInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') registerScore();
+    });
 
     document.addEventListener('keydown', event => {
         if (isPaused) return;
@@ -457,6 +617,7 @@
     });
 
     draw();
+    renderHighScores();
 </script>
 </body>
 </html>
