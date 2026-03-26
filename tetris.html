@@ -172,6 +172,104 @@
 
         .controls-info b { color: #94a3b8; margin-right: 8px; }
 
+        /* Touch Controls */
+        .touch-controls {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .touch-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .touch-btn {
+            width: 68px;
+            height: 68px;
+            font-size: 1.6rem;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1.5px solid rgba(56, 189, 248, 0.35);
+            border-radius: 18px;
+            color: var(--accent);
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.1s, transform 0.1s;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .touch-btn:active {
+            background: rgba(56, 189, 248, 0.38);
+            transform: scale(0.90);
+        }
+
+        .touch-btn-wide {
+            width: 148px;
+        }
+
+        /* Responsive layout for mobile */
+        @media (max-width: 640px) {
+            body {
+                height: auto;
+                min-height: 100vh;
+                padding: 16px 0 24px;
+                justify-content: flex-start;
+                overflow-y: auto;
+            }
+
+            .header {
+                margin-bottom: 14px;
+                gap: 12px;
+            }
+
+            .header h1 {
+                font-size: 1.6rem;
+                letter-spacing: 7px;
+            }
+
+            .game-layout {
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+                padding: 20px 16px;
+                border-radius: 20px;
+                width: calc(100vw - 24px);
+            }
+
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .widget {
+                flex: 1;
+                min-width: 70px;
+                margin-bottom: 0;
+                padding: 12px 14px;
+            }
+
+            .widget:has(#highScoreList) {
+                flex: 1 1 100%;
+            }
+
+            .value { font-size: 1.4rem; }
+
+            .controls-info { display: none; }
+
+            .touch-controls { display: flex; }
+        }
+
+
         .sound-toggle {
             position: absolute;
             top: 20px; right: 20px;
@@ -327,6 +425,19 @@
                 <div><b>↓</b> Soft Drop</div>
                 <div><b>Space</b> Hard Drop</div>
             </div>
+        </div>
+    </div>
+
+    <!-- Mobile touch buttons -->
+    <div class="touch-controls" id="touchControls">
+        <div class="touch-row">
+            <button class="touch-btn" id="btnLeft" aria-label="왼쪽">◀</button>
+            <button class="touch-btn" id="btnRotate" aria-label="회전">↻</button>
+            <button class="touch-btn" id="btnRight" aria-label="오른쪽">▶</button>
+        </div>
+        <div class="touch-row">
+            <button class="touch-btn touch-btn-wide" id="btnDown" aria-label="내리기">▼ 내리기</button>
+            <button class="touch-btn touch-btn-wide" id="btnDrop" aria-label="즉시 낙하">⚡ 낙하</button>
         </div>
     </div>
 
@@ -615,6 +726,87 @@
         const isMuted = sound.toggleMute();
         document.getElementById('soundToggle').classList.toggle('active', !isMuted);
     });
+
+    // --- Touch / Swipe Controls (canvas) ---
+    let touchStartX = 0, touchStartY = 0, touchLastX = 0;
+    let touchMoved = false;
+    const SWIPE_THRESHOLD = 18; // px per cell move
+    const TAP_MAX_DIST = 12;
+
+    canvas.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const t = e.touches[0];
+        touchStartX = touchLastX = t.clientX;
+        touchStartY = t.clientY;
+        touchMoved = false;
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+        e.preventDefault();
+        if (isPaused) return;
+        const t = e.touches[0];
+        const dx = t.clientX - touchLastX;
+        if (Math.abs(dx) >= SWIPE_THRESHOLD) {
+            if (dx < 0) { player.pos.x--; if (collide(arena, player)) player.pos.x++; }
+            else         { player.pos.x++; if (collide(arena, player)) player.pos.x--; }
+            touchLastX = t.clientX;
+            touchMoved = true;
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+        e.preventDefault();
+        if (isPaused) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        const absDx = Math.abs(dx), absDy = Math.abs(dy);
+
+        if (!touchMoved && absDx < TAP_MAX_DIST && absDy < TAP_MAX_DIST) {
+            // Tap → rotate
+            const savedX = player.pos.x;
+            rotate(player.matrix, 1);
+            if (collide(arena, player)) { rotate(player.matrix, -1); player.pos.x = savedX; }
+        } else if (dy > 60 && absDy > absDx) {
+            // Swipe down → hard drop
+            while (!collide(arena, player)) player.pos.y++;
+            player.pos.y--;
+            playerDrop();
+        }
+    }, { passive: false });
+
+    // --- On-screen button controls ---
+    function addBtnControl(id, action) {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        let interval = null;
+        const fire = () => { if (!isPaused) action(); };
+        const start = e => { e.preventDefault(); fire(); interval = setInterval(fire, 150); };
+        const stop  = e => { e.preventDefault(); clearInterval(interval); interval = null; };
+        btn.addEventListener('touchstart', start, { passive: false });
+        btn.addEventListener('touchend',   stop,  { passive: false });
+        btn.addEventListener('touchcancel',stop,  { passive: false });
+    }
+
+    addBtnControl('btnLeft',   () => { player.pos.x--; if (collide(arena, player)) player.pos.x++; });
+    addBtnControl('btnRight',  () => { player.pos.x++; if (collide(arena, player)) player.pos.x--; });
+    addBtnControl('btnDown',   () => playerDrop());
+
+    document.getElementById('btnRotate').addEventListener('touchstart', e => {
+        e.preventDefault();
+        if (isPaused) return;
+        const savedX = player.pos.x;
+        rotate(player.matrix, 1);
+        if (collide(arena, player)) { rotate(player.matrix, -1); player.pos.x = savedX; }
+    }, { passive: false });
+
+    document.getElementById('btnDrop').addEventListener('touchstart', e => {
+        e.preventDefault();
+        if (isPaused) return;
+        while (!collide(arena, player)) player.pos.y++;
+        player.pos.y--;
+        playerDrop();
+    }, { passive: false });
 
     draw();
     renderHighScores();
