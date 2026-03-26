@@ -316,9 +316,9 @@
             };
 
             return (
-                <div className="flex flex-col md:flex-row h-screen bg-slate-950 overflow-hidden">
+                <div className="flex flex-col md:flex-row min-h-screen md:h-screen bg-slate-950 overflow-y-auto md:overflow-hidden">
                     {/* Sidebar */}
-                    <div className="w-full md:w-80 p-6 bg-slate-900 border-r border-slate-800 flex flex-col gap-5 overflow-y-auto flex-shrink-0">
+                    <div className="w-full md:w-80 p-4 md:p-6 bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 flex flex-col gap-4 md:gap-5 overflow-y-auto flex-shrink-0 order-2 md:order-none">
                         <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-2 group">
                             <IconHome />
                             <span className="font-medium">홈으로 돌아가기</span>
@@ -399,10 +399,10 @@
                     </div>
 
                     {/* Canvas */}
-                    <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+                    <div className="flex-1 flex items-center justify-center p-3 md:p-4 overflow-hidden order-1 md:order-none">
                         <div
                             className="glass-morphism rounded-3xl overflow-hidden relative shadow-2xl"
-                            style={{ width: '100%', maxWidth: '600px', aspectRatio: '1 / 1', maxHeight: 'calc(100vh - 2rem)' }}
+                            style={{ width: '100%', maxWidth: '600px', aspectRatio: '1 / 1', maxHeight: 'min(92vw, calc(100vh - 2rem))' }}
                         >
                             <canvas ref={canvasRef} width={700} height={700}
                                 style={{ display: 'block', width: '100%', height: '100%' }} />
@@ -418,7 +418,7 @@
         const DiscreteControl = ({ label, options, value, activeColor, onChange }) => (
             <section>
                 <div className="text-sm font-medium text-slate-400 mb-2">{label}</div>
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                     {options.map(opt => {
                         const isActive = Math.abs(value - opt.val) < 0.0001;
                         return (
@@ -426,7 +426,7 @@
                                 key={opt.val}
                                 onClick={() => onChange(opt.val)}
                                 style={isActive ? { borderColor: activeColor, color: activeColor, background: activeColor + '22' } : {}}
-                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                className={`flex-1 min-w-[2.6rem] py-1.5 rounded-lg text-xs font-bold transition-all border ${
                                     isActive ? '' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300'
                                 }`}
                             >
