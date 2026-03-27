@@ -172,6 +172,31 @@ body {
 .now-label { font-size: 9px; font-weight:700; color:#8a5000; }
 .now-score { font-size: 17px; font-weight:900; color:#5a3000; }
 
+/* ── 홈 버튼 ── */
+#btn-home {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 158px;
+    padding: 9px 0;
+    background: rgba(255,255,255,0.22);
+    border: 2px solid rgba(255,255,255,0.45);
+    border-radius: 40px;
+    color: #7a4800;
+    font-size: 13px;
+    font-weight: 900;
+    text-decoration: none;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+    transition: all .15s;
+    letter-spacing: -0.2px;
+}
+#btn-home:hover {
+    background: rgba(255,255,255,0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 16px rgba(0,0,0,0.22);
+}
+
 /* ── 게임 캔버스 ── */
 #canvas-wrap { position: relative; }
 #game-canvas {
@@ -269,6 +294,7 @@ body {
                 </div>
             </div>
         </div>
+        <a href="index.html" id="btn-home">🏠 홈으로</a>
     </div>
 
     <!-- 게임 캔버스 -->
@@ -292,7 +318,7 @@ body {
 
         <div id="evo-panel">
             <div class="ptitle">진화의 고리</div>
-            <canvas id="evo-canvas" width="158" height="168"></canvas>
+            <canvas id="evo-canvas" width="170" height="185"></canvas>
         </div>
     </div>
 </div>
@@ -659,77 +685,117 @@ function drawNext() {
    진화의 고리 — 도넛 링 + 과일
 ══════════════════════════════════════════════ */
 function drawEvoRing() {
-    const W=158, H=168;
+    const W=170, H=185;
     evoCtx.clearRect(0,0,W,H);
-    const cx=W/2, cy=H/2+4;
-    const outerR=68, innerR=32;
 
-    /* ── 링 그림자 ── */
+    const cx=87, cy=102;
+    const outerR=70, innerR=36;
+    const midR=(outerR+innerR)/2; // 53
+
+    const D=Math.PI/180;
+    // 갭: 상단-좌측 (10~12시 방향)
+    // 캔버스 각도: 0°=오른쪽, 90°=아래, 180°=왼쪽, 270°=위
+    const gapA=200*D; // 갭 끝 (약 8시 방향 → 화면에서 10시)
+    const gapB=278*D; // 갭 시작 (약 12시 방향)
+
+    // 호 스팬: gapB→gapA 시계방향 (긴 쪽)
+    const arcSpan=(gapA - gapB + 2*Math.PI) % (2*Math.PI); // ~282°
+
+    // 수박 돌출 위치: 갭 중간 (약 239° = 10시 방향)
+    const bumpAngle=(gapA+gapB)/2; // 239°
+    const bumpDist=outerR+3;
+    const bumpCX=cx+bumpDist*Math.cos(bumpAngle);
+    const bumpCY=cy+bumpDist*Math.sin(bumpAngle);
+    const bumpR=22;
+
+    // ── 1. 그림자 ──
     evoCtx.save();
-    evoCtx.shadowColor='rgba(0,0,0,0.3)';
-    evoCtx.shadowBlur=10;
-    evoCtx.shadowOffsetY=4;
+    evoCtx.shadowColor='rgba(40,110,0,0.45)';
+    evoCtx.shadowBlur=14;
+    evoCtx.shadowOffsetY=8;
 
-    /* ── 외부 원 (도넛 바깥) ── */
-    // 링 자체를 그리기 위해 composite shape 사용
+    // ── 2. 링 본체 (C자형) ──
     evoCtx.beginPath();
-    evoCtx.arc(cx, cy, outerR, 0, Math.PI*2, false);
-    evoCtx.arc(cx, cy, innerR, 0, Math.PI*2, true);
-    // 초록빛 그라데이션
-    const ringGrad = evoCtx.createRadialGradient(cx-10, cy-10, innerR, cx, cy, outerR);
-    ringGrad.addColorStop(0, '#a8e060');
-    ringGrad.addColorStop(0.5, '#78c840');
-    ringGrad.addColorStop(1, '#4ea828');
-    evoCtx.fillStyle = ringGrad;
-    evoCtx.fill('evenodd');
-    evoCtx.restore();
-
-    /* ── 링 하이라이트 (상단) ── */
-    evoCtx.save();
-    evoCtx.beginPath();
-    evoCtx.arc(cx, cy, outerR, -Math.PI*0.85, -Math.PI*0.15, false);
-    evoCtx.arc(cx, cy, outerR-8, -Math.PI*0.15, -Math.PI*0.85, true);
+    evoCtx.arc(cx, cy, outerR, gapB, gapA, false); // 외부호, 시계방향, 긴 쪽
+    evoCtx.lineTo(cx+innerR*Math.cos(gapA), cy+innerR*Math.sin(gapA));
+    evoCtx.arc(cx, cy, innerR, gapA, gapB, true);  // 내부호, 반시계방향
     evoCtx.closePath();
-    evoCtx.fillStyle='rgba(255,255,255,0.28)';
+    const rg=evoCtx.createLinearGradient(cx-outerR, cy-outerR, cx+outerR*0.6, cy+outerR*0.6);
+    rg.addColorStop(0,   'rgba(215,250,135,0.97)');
+    rg.addColorStop(0.35,'rgba(145,215,65,0.97)');
+    rg.addColorStop(0.7, 'rgba(95,175,30,0.95)');
+    rg.addColorStop(1,   'rgba(60,140,15,0.93)');
+    evoCtx.fillStyle=rg;
+    evoCtx.fill();
+
+    // ── 3. 수박 돌출 블롭 ──
+    evoCtx.beginPath();
+    evoCtx.arc(bumpCX, bumpCY, bumpR, 0, Math.PI*2);
+    const bg=evoCtx.createRadialGradient(bumpCX-7, bumpCY-7, 3, bumpCX, bumpCY, bumpR);
+    bg.addColorStop(0,  'rgba(225,252,155,0.99)');
+    bg.addColorStop(0.5,'rgba(160,225,75,0.98)');
+    bg.addColorStop(1,  'rgba(85,160,28,0.95)');
+    evoCtx.fillStyle=bg;
     evoCtx.fill();
     evoCtx.restore();
 
-    /* ── 링 테두리 ── */
+    // ── 4. 링 테두리 ──
     evoCtx.save();
+    evoCtx.strokeStyle='rgba(55,140,20,0.55)';
+    evoCtx.lineWidth=1.8;
     evoCtx.beginPath();
-    evoCtx.arc(cx, cy, outerR, 0, Math.PI*2);
-    evoCtx.strokeStyle='rgba(60,160,40,0.6)';
-    evoCtx.lineWidth=2;
+    evoCtx.arc(cx, cy, outerR, gapB, gapA, false);
     evoCtx.stroke();
     evoCtx.beginPath();
-    evoCtx.arc(cx, cy, innerR, 0, Math.PI*2);
-    evoCtx.strokeStyle='rgba(80,180,50,0.4)';
-    evoCtx.lineWidth=1.5;
+    evoCtx.arc(cx, cy, innerR, gapA, gapB, true);
+    evoCtx.stroke();
+    evoCtx.beginPath();
+    evoCtx.arc(bumpCX, bumpCY, bumpR, 0, Math.PI*2);
     evoCtx.stroke();
     evoCtx.restore();
 
-    /* ── 중앙 구멍 (크림색) ── */
+    // ── 5. 하이라이트 (링 상단 광택) ──
+    evoCtx.save();
+    evoCtx.globalAlpha=0.28;
+    // 링 우측 상단 띠
+    evoCtx.beginPath();
+    evoCtx.arc(cx, cy, outerR-2,  gapB+18*D, gapB+95*D, false);
+    evoCtx.arc(cx, cy, outerR-10, gapB+95*D, gapB+18*D, true);
+    evoCtx.closePath();
+    evoCtx.fillStyle='white';
+    evoCtx.fill();
+    // 블롭 하이라이트
+    evoCtx.beginPath();
+    evoCtx.ellipse(bumpCX-6, bumpCY-7, bumpR*0.42, bumpR*0.25, -0.5, 0, Math.PI*2);
+    evoCtx.fillStyle='white';
+    evoCtx.fill();
+    evoCtx.restore();
+
+    // ── 6. 내부 구멍 (크림색) ──
     evoCtx.save();
     evoCtx.beginPath();
     evoCtx.arc(cx, cy, innerR-1, 0, Math.PI*2);
-    const holeG=evoCtx.createRadialGradient(cx-5,cy-5,2,cx,cy,innerR);
-    holeG.addColorStop(0,'rgba(255,245,210,0.85)');
-    holeG.addColorStop(1,'rgba(240,210,140,0.6)');
-    evoCtx.fillStyle=holeG;
+    const hg=evoCtx.createRadialGradient(cx-8,cy-8,3,cx,cy,innerR);
+    hg.addColorStop(0,'rgba(255,250,220,0.90)');
+    hg.addColorStop(1,'rgba(245,215,140,0.68)');
+    evoCtx.fillStyle=hg;
     evoCtx.fill();
     evoCtx.restore();
 
-    /* ── 과일 배치 (링 위에) ── */
-    const n=FRUITS.length;
-    const ringCenter=(outerR+innerR)/2;
-    for(let i=0;i<n;i++){
-        // 체리(0)를 왼쪽 상단~, 수박(10)을 상단에
-        const angle=-Math.PI/2 - (Math.PI*2/n)*i;
-        const fx=cx+ringCenter*Math.cos(angle);
-        const fy=cy+ringCenter*Math.sin(angle);
-        // 작은 크기로 그리기
-        const drawR=Math.min(FRUITS[i].r*0.38, 11);
-        drawFruitAt(evoCtx, fx, fy, i, 1, 0, drawR);
+    // ── 7. 과일 배치 ──
+    // 수박(index 10): 돌출 블롭 위
+    drawFruitAt(evoCtx, bumpCX, bumpCY, 10, 1, 0, 13);
+
+    // 나머지 10개: 링 위에 배치
+    // gapB(12시)에서 시계방향 → cherry(0)부터 melon(9)까지
+    // gapB 쪽(12시 오른쪽)에 cherry, gapA 쪽(10시)에 melon
+    const nf=10, pad=20*D;
+    for(let i=0;i<nf;i++){
+        const t=i/(nf-1);
+        const angle=gapB+pad + t*(arcSpan-pad*2);
+        const fi=i; // 0=cherry ... 9=melon
+        const r=Math.min(FRUITS[fi].r*0.32, 11);
+        drawFruitAt(evoCtx, cx+midR*Math.cos(angle), cy+midR*Math.sin(angle), fi, 1, 0, r);
     }
 }
 
