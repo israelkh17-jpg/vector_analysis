@@ -220,6 +220,9 @@
 
 <!-- 모바일 하단 터치 버튼 -->
 <div id="touch-controls">
+    <div style="font-size:11px;color:rgba(255,255,255,0.45);text-align:center;letter-spacing:0.3px;">
+        🍒 같은 과일이 닿으면 합체! &nbsp;⚠️ 위험선을 넘으면 게임 오버
+    </div>
     <div class="touch-row">
         <button class="touch-btn" id="btn-left">◀</button>
         <button class="touch-btn touch-btn-drop" id="btn-drop">⬇ 떨어뜨리기</button>
@@ -269,8 +272,15 @@
             <div class="card-label">과일 목록</div>
             <canvas id="guide-canvas" width="122" height="286"></canvas>
         </div>
-        <div id="tip" style="font-size:11px;opacity:.4;color:white;text-align:center;margin-top:4px;">
-            마우스/터치로<br>과일을 떨어뜨려요
+        <div class="card" style="font-size:11px;line-height:1.7;color:rgba(255,255,255,0.75);">
+            <div class="card-label">게임 방법</div>
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <div>🖱️ <b>마우스</b>로 위치 조정</div>
+                <div>👆 <b>클릭</b>으로 과일 투하</div>
+                <div>🍒 같은 과일 2개가<br>&nbsp;&nbsp;&nbsp;&nbsp;닿으면 <b>합체!</b></div>
+                <div>🍉 체리→딸기→포도<br>&nbsp;&nbsp;&nbsp;&nbsp;→…→<b>수박</b> 순서</div>
+                <div>⚠️ 과일이 <b>위험선</b>을<br>&nbsp;&nbsp;&nbsp;&nbsp;넘으면 게임 오버</div>
+            </div>
         </div>
     </div>
 </div>
