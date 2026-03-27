@@ -1,256 +1,273 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>수박게임 🍉</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: linear-gradient(135deg, #1a0a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            overflow: hidden;
-            user-select: none;
-        }
-        #game-container {
-            display: flex;
-            gap: 16px;
-            align-items: flex-start;
-        }
-        .panel {
-            width: 150px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .card {
-            background: rgba(255,255,255,0.08);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 14px;
-            padding: 14px;
-            color: white;
-        }
-        .card-label {
-            font-size: 11px;
-            opacity: 0.6;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 6px;
-        }
-        #score-val {
-            font-size: 34px;
-            font-weight: 900;
-            color: #7fff7f;
-            text-shadow: 0 0 12px rgba(127,255,127,0.6);
-            line-height: 1;
-        }
-        #best-val {
-            font-size: 20px;
-            font-weight: 700;
-            color: #ffd700;
-            text-shadow: 0 0 10px rgba(255,215,0,0.5);
-        }
-        #next-canvas  { border-radius: 8px; background: rgba(0,0,0,0.2); display: block; }
-        #guide-canvas { border-radius: 8px; background: rgba(0,0,0,0.15); display: block; }
-        #canvas-wrap  { position: relative; }
-        #game-canvas  {
-            display: block;
-            border-radius: 12px;
-            cursor: none;
-            box-shadow: 0 0 50px rgba(80,200,80,0.25), 0 20px 60px rgba(0,0,0,0.5);
-        }
-        #overlay {
-            position: absolute;
-            inset: 0;
-            border-radius: 12px;
-            background: rgba(0,0,0,0.88);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            z-index: 20;
-            backdrop-filter: blur(4px);
-        }
-        #overlay.hidden { display: none; }
-        #overlay h1  { font-size: 38px; margin-bottom: 4px; }
-        #overlay .sub { font-size: 14px; opacity: 0.6; margin-bottom: 6px; }
-        #overlay .fscore { font-size: 52px; font-weight: 900; color: #7fff7f; text-shadow: 0 0 16px rgba(127,255,127,0.6); }
-        #overlay .best-note { font-size: 13px; color: #ffd700; margin-top: 4px; opacity: 0.8; }
-        #restart-btn {
-            margin-top: 24px;
-            padding: 14px 44px;
-            font-size: 17px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #27ae60, #6ab04c);
-            color: white;
-            border: none;
-            border-radius: 40px;
-            cursor: pointer;
-            transition: transform .15s, box-shadow .15s;
-            box-shadow: 0 4px 24px rgba(39,174,96,0.55);
-        }
-        #restart-btn:hover { transform: scale(1.06); box-shadow: 0 6px 32px rgba(39,174,96,0.75); }
-        #tip { font-size: 12px; opacity: 0.45; color: white; text-align: center; margin-top: 10px; }
-        #home-btn {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 14px;
-            padding: 10px 14px;
-            color: rgba(255,255,255,0.7);
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background .2s, color .2s, border-color .2s;
-            width: 150px;
-        }
-        #home-btn:hover {
-            background: rgba(255,255,255,0.14);
-            border-color: rgba(255,255,255,0.35);
-            color: white;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수박게임 🍉</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
 
-        /* ── 모바일 전용 UI ── */
-        #mobile-header {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            z-index: 30;
-            background: rgba(10, 10, 30, 0.92);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding: 8px 14px;
-            align-items: center;
-            gap: 10px;
-        }
-        #mobile-header a.m-home {
-            display: flex; align-items: center; gap: 5px;
-            color: rgba(255,255,255,0.65); font-size: 12px; font-weight: 600;
-            text-decoration: none; flex-shrink: 0;
-            padding: 6px 10px; border-radius: 10px;
-            background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
-        }
-        .m-stat { display: flex; flex-direction: column; align-items: center; flex: 1; }
-        .m-stat-label { font-size: 9px; opacity: 0.5; letter-spacing: 1px; text-transform: uppercase; }
-        .m-stat-val { font-size: 18px; font-weight: 900; line-height: 1; }
-        #m-score-val { color: #7fff7f; text-shadow: 0 0 8px rgba(127,255,127,0.5); }
-        #m-best-val  { color: #ffd700; text-shadow: 0 0 8px rgba(255,215,0,0.4); }
-        .m-next-wrap { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
-        .m-next-wrap canvas { border-radius: 6px; background: rgba(0,0,0,0.2); }
+body {
+    background: radial-gradient(ellipse at 50% 40%, #d9994e 0%, #b8712a 60%, #a05e20 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    overflow: hidden;
+    user-select: none;
+}
 
-        #touch-controls {
-            display: none;
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            z-index: 30;
-            background: rgba(10, 10, 30, 0.92);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding: 10px 16px 14px;
-            flex-direction: column;
-            gap: 8px;
-            align-items: center;
-        }
-        .touch-row { display: flex; gap: 10px; }
-        .touch-btn {
-            width: 72px; height: 64px;
-            border-radius: 14px;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(255,255,255,0.08);
-            color: white; font-size: 22px;
-            cursor: pointer;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-            transition: background .1s, transform .1s;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .touch-btn:active { background: rgba(100,200,100,0.3); transform: scale(0.92); }
-        .touch-btn-drop {
-            width: 160px; height: 56px; font-size: 17px; font-weight: 700;
-            background: rgba(39,174,96,0.2); border-color: rgba(39,174,96,0.4); color: #7fff7f;
-            letter-spacing: 1px;
-        }
-        .touch-btn-drop:active { background: rgba(39,174,96,0.45); }
+/* ── 루트 레이아웃 ── */
+#root {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
 
-        /* 반응형 */
-        @media (max-width: 680px) {
-            body { align-items: flex-start; padding-top: 58px; padding-bottom: 148px; overflow-y: auto; }
-            #game-container { flex-direction: column; align-items: center; padding: 8px 0; }
-            .panel { display: none; }
-            #tip  { display: none; }
-            #mobile-header  { display: flex; }
-            #touch-controls { display: flex; }
-            #game-canvas { max-width: calc(100vw - 16px); height: auto; }
-        }
-    </style>
+/* ── 좌/우 패널 ── */
+.side {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    width: 158px;
+}
+
+/* ── 버블 ── */
+.bubble {
+    position: relative;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 38% 32%,
+        rgba(255,255,255,0.60) 0%,
+        rgba(255,240,190,0.30) 45%,
+        rgba(210,165,90,0.18) 100%);
+    border: 2.5px solid rgba(255,255,255,0.55);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.28),
+                inset 0 2px 10px rgba(255,255,255,0.45),
+                inset 0 -4px 12px rgba(180,120,40,0.2);
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.45);
+}
+
+/* 버블 하이라이트 */
+.bubble::before {
+    content:'';
+    position:absolute;
+    top:12%; left:18%;
+    width:38%; height:20%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.55) 0%, transparent 100%);
+    border-radius: 50%;
+    transform: rotate(-20deg);
+    pointer-events: none;
+}
+
+#score-bubble { width:152px; height:152px; }
+#score-bubble .blabel { font-size:18px; font-weight:900; letter-spacing:-0.3px; margin-bottom:1px; }
+#score-val { font-size:40px; font-weight:900; line-height:1; }
+#score-bubble .best-label { font-size:9.5px; color:rgba(255,255,255,0.72); margin-top:5px; letter-spacing:0.5px; }
+#best-val { font-size:20px; font-weight:900; color:#ffe566; text-shadow:0 0 10px rgba(255,220,0,0.7); }
+
+#next-bubble { width:152px; height:152px; }
+#next-bubble .blabel { font-size:16px; font-weight:700; margin-bottom:4px; }
+#next-canvas { display:block; background:transparent; }
+
+/* ── 순위 패널 ── */
+#rank-panel {
+    width: 158px;
+    background: linear-gradient(160deg, #fde9aa 0%, #f9d570 100%);
+    border: 2px solid rgba(255,255,255,0.6);
+    border-radius: 18px;
+    padding: 10px 8px 12px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.22), inset 0 1px 6px rgba(255,255,255,0.5);
+}
+#rank-panel .ptitle {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 900;
+    color: #7a4800;
+    margin-bottom: 7px;
+    letter-spacing: -0.3px;
+}
+.rank-tabs {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 7px;
+    padding: 0 2px;
+}
+.rtab {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(120,75,0,0.55);
+    padding: 1px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.rtab.active {
+    color: #7a4800;
+    background: rgba(255,255,255,0.45);
+}
+.rank-person { text-align:center; font-size:18px; margin-bottom:4px; }
+
+/* 배지 행 */
+.rank-row {
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+    padding: 3px 4px;
+    margin-bottom: 3px;
+    gap: 4px;
+}
+.rank-row.r1 { background: rgba(255,215,50,0.35); }
+.rank-row.r2 { background: rgba(180,215,255,0.4); }
+.rank-row.r3 { background: rgba(240,170,90,0.35); }
+.rank-row.rnow { background: rgba(255,215,50,0.45); margin-top: 6px; }
+
+.badge {
+    width: 34px; height: 34px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 900;
+    color: #fff;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.badge::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 25%;
+    width: 50%; height: 35%;
+    background: rgba(255,255,255,0.35);
+    border-radius: 50%;
+}
+.b1 { background: linear-gradient(160deg, #f9e44a 0%, #e6a800 100%); border:1.5px solid #ffd700; }
+.b2 { background: linear-gradient(160deg, #c8dfff 0%, #7ab0f0 100%); border:1.5px solid #a0c8ff; }
+.b3 { background: linear-gradient(160deg, #f0c878 0%, #c87820 100%); border:1.5px solid #e8a030; }
+.bnow { background: linear-gradient(160deg, #f9e44a 0%, #e6a800 100%); border:1.5px solid #ffd700; width:28px; height:28px; font-size:12px; }
+
+.rank-score {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #6a3800;
+    letter-spacing: 1px;
+}
+.rank-now-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.now-label { font-size: 9px; font-weight:700; color:#8a5000; }
+.now-score { font-size: 17px; font-weight:900; color:#5a3000; }
+
+/* ── 게임 캔버스 ── */
+#canvas-wrap { position: relative; }
+#game-canvas {
+    display: block;
+    cursor: none;
+    border-radius: 3px;
+    box-shadow: 0 6px 30px rgba(0,0,0,0.4);
+}
+
+/* ── 진화의 고리 패널 ── */
+#evo-panel {
+    width: 158px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+#evo-panel .ptitle {
+    font-size: 15px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.45);
+    letter-spacing: -0.3px;
+}
+#evo-canvas { display: block; }
+
+/* ── 오버레이 ── */
+#overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    z-index: 20;
+    border-radius: 3px;
+    backdrop-filter: blur(3px);
+}
+#overlay.hidden { display:none; }
+#overlay h1 { font-size:36px; font-weight:900; margin-bottom:4px; }
+#overlay .sub { font-size:13px; opacity:.6; margin-bottom:4px; }
+#overlay .fscore { font-size:56px; font-weight:900; color:#ffe066; text-shadow:0 0 18px rgba(255,220,0,0.65); }
+#overlay .best-note { font-size:13px; color:#ffd700; margin-top:4px; }
+#restart-btn {
+    margin-top:22px;
+    padding:13px 44px;
+    font-size:16px;
+    font-weight:900;
+    background: linear-gradient(135deg, #e67e22, #f39c12);
+    color:white; border:none; border-radius:40px; cursor:pointer;
+    box-shadow: 0 4px 20px rgba(230,120,0,0.55);
+    transition: transform .15s;
+}
+#restart-btn:hover { transform:scale(1.06); }
+</style>
 </head>
 <body>
-<!-- 모바일 상단 헤더 -->
-<div id="mobile-header">
-    <a class="m-home" href="index.html">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        홈
-    </a>
-    <div class="m-stat">
-        <div class="m-stat-label">점수</div>
-        <div class="m-stat-val" id="m-score-val">0</div>
-    </div>
-    <div class="m-stat">
-        <div class="m-stat-label">최고기록</div>
-        <div class="m-stat-val" id="m-best-val">0</div>
-    </div>
-    <div class="m-next-wrap">
-        <div class="m-stat-label" style="font-size:9px;opacity:.5;letter-spacing:1px;text-transform:uppercase;color:white;">다음</div>
-        <canvas id="m-next-canvas" width="48" height="48"></canvas>
-    </div>
-</div>
+<div id="root">
 
-<!-- 모바일 하단 터치 버튼 -->
-<div id="touch-controls">
-    <div style="font-size:11px;color:rgba(255,255,255,0.45);text-align:center;letter-spacing:0.3px;">
-        🍒 같은 과일이 닿으면 합체! &nbsp;⚠️ 위험선을 넘으면 게임 오버
-    </div>
-    <div class="touch-row">
-        <button class="touch-btn" id="btn-left">◀</button>
-        <button class="touch-btn touch-btn-drop" id="btn-drop">⬇ 떨어뜨리기</button>
-        <button class="touch-btn" id="btn-right">▶</button>
-    </div>
-</div>
-
-<div id="game-container">
     <!-- 왼쪽 패널 -->
-    <div class="panel">
-        <a id="home-btn" href="index.html">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            홈으로
-        </a>
-        <div class="card">
-            <div class="card-label">점수</div>
+    <div class="side">
+        <div class="bubble" id="score-bubble">
+            <div class="blabel">점수</div>
             <div id="score-val">0</div>
-        </div>
-        <div class="card">
-            <div class="card-label">최고기록</div>
+            <div class="best-label">BEST SCORE</div>
             <div id="best-val">0</div>
         </div>
-        <div class="card">
-            <div class="card-label">다음 과일</div>
-            <canvas id="next-canvas" width="122" height="122"></canvas>
+
+        <div id="rank-panel">
+            <div class="ptitle">오늘의 득점 순위</div>
+            <div class="rank-tabs">
+                <span class="rtab active">L</span>
+                <span class="rtab">R</span>
+            </div>
+            <div class="rank-person">👤</div>
+            <div class="rank-row r1">
+                <div class="badge b1">1</div>
+                <div class="rank-score" id="rank1">─────</div>
+            </div>
+            <div class="rank-row r2">
+                <div class="badge b2">2</div>
+                <div class="rank-score" id="rank2">─────</div>
+            </div>
+            <div class="rank-row r3">
+                <div class="badge b3">3</div>
+                <div class="rank-score" id="rank3">─────</div>
+            </div>
+            <div class="rank-row rnow">
+                <div class="badge bnow">1</div>
+                <div class="rank-now-wrap">
+                    <div class="now-label">NOW</div>
+                    <div class="now-score" id="rank-now">0</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -267,536 +284,501 @@
     </div>
 
     <!-- 오른쪽 패널 -->
-    <div class="panel">
-        <div class="card">
-            <div class="card-label">과일 목록</div>
-            <canvas id="guide-canvas" width="122" height="286"></canvas>
+    <div class="side">
+        <div class="bubble" id="next-bubble">
+            <div class="blabel">다음</div>
+            <canvas id="next-canvas" width="88" height="88"></canvas>
         </div>
-        <div class="card" style="font-size:11px;line-height:1.7;color:rgba(255,255,255,0.75);">
-            <div class="card-label">게임 방법</div>
-            <div style="display:flex;flex-direction:column;gap:5px;">
-                <div>🖱️ <b>마우스</b>로 위치 조정</div>
-                <div>👆 <b>클릭</b>으로 과일 투하</div>
-                <div>🍒 같은 과일 2개가<br>&nbsp;&nbsp;&nbsp;&nbsp;닿으면 <b>합체!</b></div>
-                <div>🍉 체리→딸기→포도<br>&nbsp;&nbsp;&nbsp;&nbsp;→…→<b>수박</b> 순서</div>
-                <div>⚠️ 과일이 <b>위험선</b>을<br>&nbsp;&nbsp;&nbsp;&nbsp;넘으면 게임 오버</div>
-            </div>
+
+        <div id="evo-panel">
+            <div class="ptitle">진화의 고리</div>
+            <canvas id="evo-canvas" width="158" height="168"></canvas>
         </div>
     </div>
 </div>
 
 <script>
-/* ─────────────── 과일 데이터 ─────────────── */
+/* ══════════════════════════════════════════════
+   과일 데이터
+══════════════════════════════════════════════ */
 const FRUITS = [
-    { name:'체리',     r:16,   color:'#e74c3c', grad:'#ff6b6b', emoji:'🍒', score:1   },
-    { name:'딸기',     r:24,   color:'#e91e63', grad:'#ff69b4', emoji:'🍓', score:3   },
-    { name:'포도',     r:32,   color:'#9b59b6', grad:'#c39bd3', emoji:'🍇', score:6   },
-    { name:'레몬',     r:40,   color:'#f1c40f', grad:'#f9e45b', emoji:'🍋', score:10  },
-    { name:'오렌지',   r:50,   color:'#e67e22', grad:'#f0a040', emoji:'🍊', score:15  },
-    { name:'사과',     r:59,   color:'#c0392b', grad:'#e74c3c', emoji:'🍎', score:21  },
-    { name:'배',       r:67,   color:'#93c47d', grad:'#b6d7a8', emoji:'🍐', score:28  },
-    { name:'복숭아',   r:75,   color:'#ffb3ba', grad:'#ffc8d0', emoji:'🍑', score:36  },
-    { name:'파인애플', r:84,   color:'#e6b800', grad:'#ffd700', emoji:'🍍', score:45  },
-    { name:'멜론',     r:95,   color:'#6ab04c', grad:'#88cc66', emoji:'🍈', score:55  },
-    { name:'수박',     r:112,  color:'#2ecc71', grad:'#55dd88', emoji:'🍉', score:100 },
+    { name:'체리',     r:15,  color:'#cc2222', grad:'#ff6666', emoji:'🍒', score:1   },
+    { name:'딸기',     r:22,  color:'#e8184a', grad:'#ff6b9d', emoji:'🍓', score:3   },
+    { name:'포도',     r:30,  color:'#7c3aed', grad:'#c4b5fd', emoji:'🍇', score:6   },
+    { name:'금귤',     r:38,  color:'#d97706', grad:'#fde68a', emoji:'🍊', score:10  },
+    { name:'감',       r:47,  color:'#dc6d15', grad:'#fed7aa', emoji:'🫐', score:15  },
+    { name:'사과',     r:55,  color:'#dc2626', grad:'#fca5a5', emoji:'🍎', score:21  },
+    { name:'배',       r:63,  color:'#65a30d', grad:'#d9f99d', emoji:'🍐', score:28  },
+    { name:'복숭아',   r:71,  color:'#e879a0', grad:'#fecdd3', emoji:'🍑', score:36  },
+    { name:'파인애플', r:80,  color:'#ca8a04', grad:'#fef08a', emoji:'🍍', score:45  },
+    { name:'멜론',     r:90,  color:'#16a34a', grad:'#bbf7d0', emoji:'🍈', score:55  },
+    { name:'수박',     r:107, color:'#15803d', grad:'#86efac', emoji:'🍉', score:100 },
 ];
 
-/* ─────────────── 캔버스 / 상수 ─────────────── */
-const CW = 400, CH = 620;
-const WALL_T = 20;
-const DANGER_Y = 85;
-const DROP_POOL = 5; // 처음 N가지 과일만 랜덤 드롭
+/* ══════════════════════════════════════════════
+   상수 / 캔버스
+══════════════════════════════════════════════ */
+const CW=360, CH=580;
+const WALL_T=18, DANGER_Y=82, DROP_POOL=5;
 
-const canvas  = document.getElementById('game-canvas');
-canvas.width  = CW;
-canvas.height = CH;
+const canvas = document.getElementById('game-canvas');
+canvas.width=CW; canvas.height=CH;
 const ctx = canvas.getContext('2d');
 
 const nxCanvas = document.getElementById('next-canvas');
 const nxCtx    = nxCanvas.getContext('2d');
 
-const mNextCanvas = document.getElementById('m-next-canvas');
-const mNextCtx    = mNextCanvas.getContext('2d');
+const evoCanvas = document.getElementById('evo-canvas');
+const evoCtx    = evoCanvas.getContext('2d');
 
-const guideCanvas = document.getElementById('guide-canvas');
-const guideCtx    = guideCanvas.getContext('2d');
-
-/* ─────────────── Matter.js ─────────────── */
-const { Engine, Body, Bodies, World, Events, Composite } = Matter;
-
+/* ══════════════════════════════════════════════
+   Matter.js
+══════════════════════════════════════════════ */
+const { Engine, Bodies, World, Events, Composite } = Matter;
 let engine, world;
-let score = 0;
-let bestScore = +localStorage.getItem('suika_best') || 0;
-document.getElementById('best-val').textContent   = bestScore;
-document.getElementById('m-best-val').textContent = bestScore;
 
-let gameOver    = false;
-let dropping    = false;
-let currentIdx  = 0;
-let nextIdx     = 0;
-let cursorX     = CW / 2;
-let mergeQueue  = [];
-let particles   = [];
-let floatTexts  = [];
-let dangerTimer = 0;
-let goTimer     = null;
+/* ══════════════════════════════════════════════
+   게임 상태
+══════════════════════════════════════════════ */
+let score=0, bestScore=+localStorage.getItem('suika_best')||0;
+let gameOver=false, dropping=false;
+let currentIdx=0, nextIdx=0, cursorX=CW/2;
+let mergeQueue=[], particles=[], floatTexts=[];
+let dangerTimer=0, goTimer=null;
+let todayScores=JSON.parse(localStorage.getItem('suika_today')||'[]');
 
-/* ─────────────── 이모지 캐시 ─────────────── */
-const emojiCache = {};
-function getEmojiImg(idx) {
-    if (emojiCache[idx]) return emojiCache[idx];
-    const f = FRUITS[idx];
-    const sz = f.r * 2.2;
+document.getElementById('best-val').textContent = bestScore;
+updateRankPanel();
+
+/* ══════════════════════════════════════════════
+   이모지 캐시 (원형 클리핑 + 그라데이션 배경 + 하이라이트)
+══════════════════════════════════════════════ */
+const emojiCache={};
+function getEmojiImg(idx, radius) {
+    const key = idx + '_' + radius;
+    if (emojiCache[key]) return emojiCache[key];
+    const f  = FRUITS[idx];
+    const r  = radius || f.r;
+    const sz = r * 2.6;
     const oc = document.createElement('canvas');
-    oc.width = oc.height = sz;
+    oc.width = oc.height = Math.ceil(sz);
     const ox = oc.getContext('2d');
-    ox.font = `${f.r * 1.7}px serif`;
-    ox.textAlign = 'center';
-    ox.textBaseline = 'middle';
-    ox.fillText(f.emoji, sz / 2, sz / 2);
-    emojiCache[idx] = oc;
+    const cx = sz/2, cy = sz/2;
+
+    ox.beginPath();
+    ox.arc(cx, cy, r * 1.0, 0, Math.PI*2);
+    ox.clip();
+
+    // 그라데이션 배경
+    const g = ox.createRadialGradient(cx - r*0.2, cy - r*0.25, r*0.05, cx, cy, r);
+    g.addColorStop(0, f.grad);
+    g.addColorStop(1, f.color);
+    ox.fillStyle = g;
+    ox.fillRect(0, 0, sz, sz);
+
+    // 하이라이트
+    const h = ox.createRadialGradient(cx - r*0.28, cy - r*0.32, 0, cx - r*0.1, cy - r*0.1, r*0.6);
+    h.addColorStop(0, 'rgba(255,255,255,0.52)');
+    h.addColorStop(1, 'rgba(255,255,255,0)');
+    ox.fillStyle = h;
+    ox.fillRect(0, 0, sz, sz);
+
+    // 이모지
+    ox.font = `${r * 1.35}px serif`;
+    ox.textAlign='center'; ox.textBaseline='middle';
+    ox.fillText(f.emoji, cx, cy + r*0.06);
+
+    // 테두리
+    ox.beginPath();
+    ox.arc(cx, cy, r, 0, Math.PI*2);
+    ox.strokeStyle = 'rgba(255,255,255,0.35)';
+    ox.lineWidth = 1.5;
+    ox.stroke();
+
+    emojiCache[key] = oc;
     return oc;
 }
 
-/* ─────────────── 물리 초기화 ─────────────── */
+/* ══════════════════════════════════════════════
+   물리 초기화
+══════════════════════════════════════════════ */
 function initPhysics() {
-    engine = Engine.create({ gravity: { y: 2.5 } });
+    engine = Engine.create({ gravity:{ y:2.2 } });
     world  = engine.world;
-
-    const floor = Bodies.rectangle(CW/2, CH + WALL_T/2, CW*2, WALL_T, { isStatic:true, label:'wall', friction:0.6 });
-    const wallL = Bodies.rectangle(-WALL_T/2, CH/2, WALL_T, CH*2, { isStatic:true, label:'wall' });
-    const wallR = Bodies.rectangle(CW+WALL_T/2, CH/2, WALL_T, CH*2, { isStatic:true, label:'wall' });
-    World.add(world, [floor, wallL, wallR]);
-
+    World.add(world, [
+        Bodies.rectangle(CW/2, CH+WALL_T/2, CW*2, WALL_T, { isStatic:true, label:'wall', friction:0.6 }),
+        Bodies.rectangle(-WALL_T/2, CH/2, WALL_T, CH*2,   { isStatic:true, label:'wall' }),
+        Bodies.rectangle(CW+WALL_T/2, CH/2, WALL_T, CH*2, { isStatic:true, label:'wall' }),
+    ]);
     Events.on(engine, 'collisionStart', onCollision);
 }
 
 function onCollision(event) {
     if (gameOver) return;
-    for (const pair of event.pairs) {
-        const { bodyA, bodyB } = pair;
-        if (bodyA.label !== 'fruit' || bodyB.label !== 'fruit') continue;
-        if (bodyA.fruitIdx !== bodyB.fruitIdx) continue;
-        if (bodyA.fruitIdx >= FRUITS.length - 1) continue;
+    for (const { bodyA, bodyB } of event.pairs) {
+        if (bodyA.label!=='fruit'||bodyB.label!=='fruit') continue;
+        if (bodyA.fruitIdx!==bodyB.fruitIdx) continue;
+        if (bodyA.fruitIdx>=FRUITS.length-1) continue;
         const dup = mergeQueue.some(m =>
-            m.a.id===bodyA.id || m.a.id===bodyB.id ||
-            m.b.id===bodyA.id || m.b.id===bodyB.id);
-        if (!dup) mergeQueue.push({ a: bodyA, b: bodyB });
+            m.a.id===bodyA.id||m.a.id===bodyB.id||m.b.id===bodyA.id||m.b.id===bodyB.id);
+        if (!dup) mergeQueue.push({ a:bodyA, b:bodyB });
     }
 }
 
-/* ─────────────── 과일 생성 ─────────────── */
 function makeFruit(x, y, idx) {
-    const f = FRUITS[idx];
-    const body = Bodies.circle(x, y, f.r, {
-        restitution: 0.35,
-        friction: 0.5,
-        frictionAir: 0.008,
-        density: 0.0018 + idx * 0.0003,
-        label: 'fruit',
+    const f=FRUITS[idx];
+    const b=Bodies.circle(x, y, f.r, {
+        restitution:0.3, friction:0.5, frictionAir:0.01,
+        density:0.002+idx*0.0003, label:'fruit',
     });
-    body.fruitIdx = idx;
-    return body;
+    b.fruitIdx=idx;
+    return b;
 }
 
-/* ─────────────── 합체 처리 ─────────────── */
+/* ══════════════════════════════════════════════
+   합체
+══════════════════════════════════════════════ */
 function processMerges() {
     if (!mergeQueue.length) return;
-    const batch = mergeQueue.splice(0);
-    const done  = new Set();
+    const batch=mergeQueue.splice(0), done=new Set();
     for (const { a, b } of batch) {
-        if (done.has(a.id) || done.has(b.id)) continue;
-        if (!Composite.get(world, a.id, 'body') || !Composite.get(world, b.id, 'body')) continue;
+        if (done.has(a.id)||done.has(b.id)) continue;
+        if (!Composite.get(world,a.id,'body')||!Composite.get(world,b.id,'body')) continue;
         done.add(a.id); done.add(b.id);
-
-        const mx = (a.position.x + b.position.x) / 2;
-        const my = (a.position.y + b.position.y) / 2;
-        const ni = a.fruitIdx + 1;
-
-        World.remove(world, a);
-        World.remove(world, b);
-
-        const nb = makeFruit(mx, my, ni);
-        World.add(world, nb);
-
-        const gain = FRUITS[ni].score;
-        score += gain;
-        document.getElementById('score-val').textContent = score;
-        document.getElementById('m-score-val').textContent = score;
-
-        spawnParticles(mx, my, FRUITS[ni].color, ni);
-        floatTexts.push({ x: mx, y: my - 10, text: `+${gain}`, alpha: 1, vy: -1.8 });
+        const mx=(a.position.x+b.position.x)/2, my=(a.position.y+b.position.y)/2;
+        const ni=a.fruitIdx+1;
+        World.remove(world,a); World.remove(world,b);
+        World.add(world, makeFruit(mx,my,ni));
+        const gain=FRUITS[ni].score;
+        score+=gain;
+        document.getElementById('score-val').textContent=score;
+        document.getElementById('rank-now').textContent=score;
+        spawnParticles(mx,my,FRUITS[ni].color,ni);
+        floatTexts.push({x:mx,y:my-10,text:`+${gain}`,alpha:1,vy:-2});
     }
 }
 
-/* ─────────────── 파티클 ─────────────── */
-function spawnParticles(x, y, color, tier) {
-    const n = 10 + tier * 3;
-    for (let i = 0; i < n; i++) {
-        const a = (Math.PI * 2 / n) * i + Math.random() * 0.6;
-        const sp = 1.5 + Math.random() * 4.5;
-        particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - 1,
-            r: 2 + Math.random() * 4, color, life: 1 });
+/* ══════════════════════════════════════════════
+   파티클
+══════════════════════════════════════════════ */
+function spawnParticles(x,y,color,tier) {
+    const n=10+tier*3;
+    for(let i=0;i<n;i++){
+        const a=(Math.PI*2/n)*i+Math.random()*0.6, sp=1.5+Math.random()*5;
+        particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.5,r:2+Math.random()*4,color,life:1});
     }
 }
 
-/* ─────────────── 드롭 ─────────────── */
-function randIdx() { return Math.floor(Math.random() * DROP_POOL); }
-
+/* ══════════════════════════════════════════════
+   드롭
+══════════════════════════════════════════════ */
+function randIdx(){ return Math.floor(Math.random()*DROP_POOL); }
 function dropFruit() {
-    if (dropping || gameOver) return;
-    dropping = true;
-    const f   = FRUITS[currentIdx];
-    const clampX = Math.max(f.r + 3, Math.min(CW - f.r - 3, cursorX));
-    const body = makeFruit(clampX, DANGER_Y - f.r - 6, currentIdx);
-    World.add(world, body);
-    currentIdx = nextIdx;
-    nextIdx    = randIdx();
-    setTimeout(() => { dropping = false; }, 450);
+    if(dropping||gameOver) return;
+    dropping=true;
+    const f=FRUITS[currentIdx];
+    const cx=Math.max(f.r+5,Math.min(CW-f.r-5,cursorX));
+    World.add(world,makeFruit(cx,DANGER_Y-f.r-4,currentIdx));
+    currentIdx=nextIdx; nextIdx=randIdx();
+    setTimeout(()=>{ dropping=false; },450);
 }
 
-/* ─────────────── 게임 오버 ─────────────── */
+/* ══════════════════════════════════════════════
+   게임 오버
+══════════════════════════════════════════════ */
 function checkDanger() {
-    const bodies = Composite.allBodies(world);
-    let danger = false;
-    for (const b of bodies) {
-        if (b.label !== 'fruit') continue;
-        if (b.position.y - FRUITS[b.fruitIdx].r < DANGER_Y) {
-            if (Math.abs(b.velocity.y) < 1 && Math.abs(b.velocity.x) < 1) {
-                danger = true; break;
-            }
-        }
+    let danger=false;
+    for(const b of Composite.allBodies(world)){
+        if(b.label!=='fruit') continue;
+        if(b.position.y-FRUITS[b.fruitIdx].r<DANGER_Y &&
+           Math.abs(b.velocity.y)<1 && Math.abs(b.velocity.x)<1){ danger=true; break; }
     }
-    if (danger) {
-        dangerTimer += 16;
-        if (dangerTimer > 2000 && !goTimer) {
-            goTimer = setTimeout(triggerGameOver, 200);
-        }
-    } else {
-        dangerTimer = 0;
-        clearTimeout(goTimer); goTimer = null;
-    }
+    if(danger){ dangerTimer+=16; if(dangerTimer>2200&&!goTimer) goTimer=setTimeout(triggerGameOver,200); }
+    else { dangerTimer=0; clearTimeout(goTimer); goTimer=null; }
 }
 
 function triggerGameOver() {
-    if (gameOver) return;
-    gameOver = true;
-    document.getElementById('final-score').textContent = score;
-    if (score > bestScore) {
-        bestScore = score;
-        localStorage.setItem('suika_best', bestScore);
-        document.getElementById('best-val').textContent = bestScore;
-        document.getElementById('m-best-val').textContent = bestScore;
-        document.getElementById('new-best').style.display = 'block';
-    } else {
-        document.getElementById('new-best').style.display = 'none';
-    }
+    if(gameOver) return;
+    gameOver=true;
+    document.getElementById('final-score').textContent=score;
+    if(score>bestScore){
+        bestScore=score;
+        localStorage.setItem('suika_best',bestScore);
+        document.getElementById('best-val').textContent=bestScore;
+        document.getElementById('new-best').style.display='block';
+    } else { document.getElementById('new-best').style.display='none'; }
+    todayScores.push(score);
+    todayScores.sort((a,b)=>b-a);
+    todayScores=todayScores.slice(0,3);
+    localStorage.setItem('suika_today',JSON.stringify(todayScores));
+    updateRankPanel();
     document.getElementById('overlay').classList.remove('hidden');
 }
 
-/* ─────────────── 렌더 헬퍼 ─────────────── */
-function drawFruitAt(ctx2, x, y, idx, alpha = 1, rot = 0) {
-    const f = FRUITS[idx];
-    const r = f.r;
-    ctx2.save();
-    ctx2.translate(x, y);
-    if (rot) ctx2.rotate(rot);
-    ctx2.globalAlpha = alpha;
-
-    // 그림자
-    ctx2.shadowColor = 'rgba(0,0,0,0.22)';
-    ctx2.shadowBlur  = 10;
-    ctx2.shadowOffsetY = 4;
-
-    // 베이스 원
-    const g1 = ctx2.createRadialGradient(-r*.25, -r*.25, r*.05, 0, 0, r);
-    g1.addColorStop(0, f.grad);
-    g1.addColorStop(1, f.color);
-    ctx2.beginPath();
-    ctx2.arc(0, 0, r, 0, Math.PI*2);
-    ctx2.fillStyle = g1;
-    ctx2.fill();
-
-    ctx2.shadowColor = 'transparent';
-
-    // 하이라이트
-    const g2 = ctx2.createRadialGradient(-r*.3, -r*.35, r*.05, -r*.15, -r*.15, r*.7);
-    g2.addColorStop(0, 'rgba(255,255,255,0.45)');
-    g2.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx2.beginPath();
-    ctx2.arc(0, 0, r, 0, Math.PI*2);
-    ctx2.fillStyle = g2;
-    ctx2.fill();
-
-    // 이모지
-    const sz = r * 2.2;
-    try { ctx2.drawImage(getEmojiImg(idx), -sz/2, -sz/2, sz, sz); } catch(e){}
-
-    ctx2.restore();
+function updateRankPanel(){
+    ['rank1','rank2','rank3'].forEach((id,i)=>{
+        document.getElementById(id).textContent =
+            todayScores[i]!==undefined ? todayScores[i].toLocaleString() : '─────';
+    });
 }
 
-/* ─────────────── 메인 그리기 ─────────────── */
+/* ══════════════════════════════════════════════
+   게임 캔버스 렌더링
+══════════════════════════════════════════════ */
 function drawBG() {
-    // 나무 박스 배경
-    const gBG = ctx.createLinearGradient(0, 0, 0, CH);
-    gBG.addColorStop(0, '#fef9ec');
-    gBG.addColorStop(1, '#fde8b0');
-    ctx.fillStyle = gBG;
-    ctx.fillRect(0, 0, CW, CH);
+    // 드롭존 (상단)
+    ctx.fillStyle='#e0b870';
+    ctx.fillRect(0,0,CW,DANGER_Y);
 
-    // 격자
-    ctx.strokeStyle = 'rgba(0,0,0,0.04)';
-    ctx.lineWidth   = 1;
-    for (let x = 0; x < CW; x += 40) {
-        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,CH); ctx.stroke();
-    }
-    for (let y = 0; y < CH; y += 40) {
-        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(CW,y); ctx.stroke();
-    }
+    // 게임존 크림
+    const bg=ctx.createLinearGradient(0,DANGER_Y,0,CH);
+    bg.addColorStop(0,'#fffdf0');
+    bg.addColorStop(1,'#fdefc8');
+    ctx.fillStyle=bg;
+    ctx.fillRect(0,DANGER_Y,CW,CH-DANGER_Y);
+
+    // 경계 그림자
+    const sg=ctx.createLinearGradient(0,DANGER_Y,0,DANGER_Y+20);
+    sg.addColorStop(0,'rgba(180,120,20,0.18)');
+    sg.addColorStop(1,'rgba(180,120,20,0)');
+    ctx.fillStyle=sg;
+    ctx.fillRect(0,DANGER_Y,CW,20);
 }
 
-function drawWalls() {
-    // 왼/오 벽
-    const wGrad = ctx.createLinearGradient(0, 0, 6, 0);
-    wGrad.addColorStop(0, '#c8915a');
-    wGrad.addColorStop(1, '#e8b07a');
-    ctx.fillStyle = wGrad;
-    ctx.fillRect(0, 0, 5, CH);
-    ctx.fillRect(CW-5, 0, 5, CH);
-
+function drawBox() {
+    const T=7;
+    // 좌벽
+    ctx.fillStyle=ctx.createLinearGradient(0,0,T*2,0);
+    ctx.fillStyle='#c87830';
+    ctx.fillRect(0,0,T,CH);
+    ctx.fillStyle='rgba(255,200,100,0.35)';
+    ctx.fillRect(0,0,2,CH);
+    // 우벽
+    ctx.fillStyle='#c87830';
+    ctx.fillRect(CW-T,0,T,CH);
+    ctx.fillStyle='rgba(255,200,100,0.35)';
+    ctx.fillRect(CW-2,0,2,CH);
     // 바닥
-    const fGrad = ctx.createLinearGradient(0, CH-6, 0, CH);
-    fGrad.addColorStop(0, '#c8915a');
-    fGrad.addColorStop(1, '#e8b07a');
-    ctx.fillStyle = fGrad;
-    ctx.fillRect(0, CH-5, CW, 5);
+    ctx.fillStyle='#b86820';
+    ctx.fillRect(0,CH-T,CW,T);
+
+    // 중앙 세로 가이드
+    ctx.save();
+    ctx.strokeStyle='rgba(180,130,50,0.3)';
+    ctx.lineWidth=1;
+    ctx.setLineDash([4,7]);
+    ctx.beginPath(); ctx.moveTo(CW/2,0); ctx.lineTo(CW/2,CH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
 
     // 위험선
-    const danger = dangerTimer > 0;
+    const flash=dangerTimer>0;
     ctx.save();
-    ctx.strokeStyle = danger ? `rgba(255,60,60,${0.5 + 0.4*Math.sin(Date.now()*0.01)})` : 'rgba(255,80,80,0.4)';
-    ctx.lineWidth = danger ? 2.5 : 1.5;
-    ctx.setLineDash([8, 5]);
-    ctx.beginPath();
-    ctx.moveTo(5, DANGER_Y);
-    ctx.lineTo(CW-5, DANGER_Y);
-    ctx.stroke();
+    ctx.strokeStyle=flash
+        ?`rgba(255,50,50,${0.5+0.45*Math.sin(Date.now()*0.013)})`
+        :'rgba(255,90,70,0.45)';
+    ctx.lineWidth=flash?2.5:1.5;
+    ctx.setLineDash([7,5]);
+    ctx.beginPath(); ctx.moveTo(T,DANGER_Y); ctx.lineTo(CW-T,DANGER_Y); ctx.stroke();
     ctx.setLineDash([]);
-
-    ctx.fillStyle = danger ? 'rgba(255,60,60,0.85)' : 'rgba(255,80,80,0.55)';
-    ctx.font      = '11px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText('⚠ 위험선', CW-8, DANGER_Y - 4);
     ctx.restore();
 }
 
+function drawFruitAt(ctx2,x,y,idx,alpha=1,rot=0,overrideR) {
+    const f=FRUITS[idx];
+    const r=overrideR||f.r;
+    ctx2.save();
+    ctx2.translate(x,y);
+    if(rot) ctx2.rotate(rot);
+    ctx2.globalAlpha=alpha;
+    const img=getEmojiImg(idx,r);
+    const sz=r*2.6;
+    ctx2.drawImage(img,-sz/2,-sz/2,sz,sz);
+    ctx2.restore();
+}
+
 function drawAllFruits() {
-    const bodies = Composite.allBodies(world);
-    for (const b of bodies) {
-        if (b.label !== 'fruit') continue;
-        drawFruitAt(ctx, b.position.x, b.position.y, b.fruitIdx, 1, b.angle);
+    for(const b of Composite.allBodies(world)){
+        if(b.label!=='fruit') continue;
+        drawFruitAt(ctx,b.position.x,b.position.y,b.fruitIdx,1,b.angle);
     }
 }
 
 function drawDropPreview() {
-    if (dropping || gameOver) return;
-    const f  = FRUITS[currentIdx];
-    const cx = Math.max(f.r+5, Math.min(CW-f.r-5, cursorX));
-    const cy = DANGER_Y - f.r - 8;
-
-    // 드롭 가이드 라인
+    if(dropping||gameOver) return;
+    const f=FRUITS[currentIdx];
+    const cx=Math.max(f.r+7,Math.min(CW-f.r-7,cursorX));
+    const cy=DANGER_Y/2;
+    // 가이드선
     ctx.save();
-    ctx.strokeStyle = 'rgba(120,160,255,0.35)';
-    ctx.lineWidth   = 1.5;
-    ctx.setLineDash([6, 5]);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + f.r);
-    ctx.lineTo(cx, CH - 5);
-    ctx.stroke();
+    ctx.strokeStyle='rgba(160,110,40,0.4)';
+    ctx.lineWidth=1;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(cx,cy+f.r+2); ctx.lineTo(cx,CH-7); ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
-
-    drawFruitAt(ctx, cx, cy, currentIdx, 0.75);
-
-    // 커서 포인터
-    ctx.save();
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.beginPath();
-    ctx.arc(cx, cy - f.r - 8, 4, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
+    drawFruitAt(ctx,cx,cy,currentIdx,0.82);
 }
 
 function drawParticles() {
-    for (let i = particles.length-1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx; p.y += p.vy; p.vy += 0.12;
-        p.life -= 0.028;
-        if (p.life <= 0) { particles.splice(i,1); continue; }
-        ctx.save();
-        ctx.globalAlpha = p.life;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2);
-        ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 6;
-        ctx.fill();
-        ctx.restore();
+    for(let i=particles.length-1;i>=0;i--){
+        const p=particles[i];
+        p.x+=p.vx; p.y+=p.vy; p.vy+=0.15; p.life-=0.026;
+        if(p.life<=0){particles.splice(i,1);continue;}
+        ctx.save(); ctx.globalAlpha=p.life;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);
+        ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=6;
+        ctx.fill(); ctx.restore();
     }
 }
 
 function drawFloatTexts() {
-    for (let i = floatTexts.length-1; i >= 0; i--) {
-        const ft = floatTexts[i];
-        ft.y    += ft.vy;
-        ft.alpha -= 0.022;
-        if (ft.alpha <= 0) { floatTexts.splice(i,1); continue; }
-        ctx.save();
-        ctx.globalAlpha = ft.alpha;
-        ctx.font        = 'bold 17px sans-serif';
-        ctx.textAlign   = 'center';
-        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-        ctx.lineWidth   = 3;
-        ctx.strokeText(ft.text, ft.x, ft.y);
-        ctx.fillStyle   = '#ffee00';
-        ctx.fillText(ft.text, ft.x, ft.y);
+    for(let i=floatTexts.length-1;i>=0;i--){
+        const ft=floatTexts[i];
+        ft.y+=ft.vy; ft.alpha-=0.022;
+        if(ft.alpha<=0){floatTexts.splice(i,1);continue;}
+        ctx.save(); ctx.globalAlpha=ft.alpha;
+        ctx.font='bold 18px sans-serif'; ctx.textAlign='center';
+        ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=3; ctx.strokeText(ft.text,ft.x,ft.y);
+        ctx.fillStyle='#ffee00'; ctx.fillText(ft.text,ft.x,ft.y);
         ctx.restore();
     }
 }
 
-/* 다음 과일 패널 */
+/* ══════════════════════════════════════════════
+   다음 과일 패널
+══════════════════════════════════════════════ */
 function drawNext() {
-    nxCtx.clearRect(0, 0, 122, 122);
-    drawFruitAt(nxCtx, 61, 61, nextIdx);
-    // 모바일 미니 미리보기
-    mNextCtx.clearRect(0, 0, 48, 48);
-    const f = FRUITS[nextIdx];
-    const mr = Math.min(f.r * 0.42, 20);
-    mNextCtx.save();
-    mNextCtx.translate(24, 24);
-    const g1 = mNextCtx.createRadialGradient(-mr*.25, -mr*.25, mr*.05, 0, 0, mr);
-    g1.addColorStop(0, f.grad); g1.addColorStop(1, f.color);
-    mNextCtx.beginPath(); mNextCtx.arc(0, 0, mr, 0, Math.PI*2);
-    mNextCtx.fillStyle = g1; mNextCtx.fill();
-    mNextCtx.font = `${mr * 1.6}px serif`;
-    mNextCtx.textAlign = 'center'; mNextCtx.textBaseline = 'middle';
-    mNextCtx.fillText(f.emoji, 0, 0);
-    mNextCtx.restore();
+    nxCtx.clearRect(0,0,88,88);
+    const f=FRUITS[nextIdx];
+    const r=Math.min(f.r,34);
+    drawFruitAt(nxCtx,44,44,nextIdx,1,0,r);
 }
 
-/* 가이드 패널 */
-function drawGuide() {
-    guideCtx.clearRect(0, 0, 122, 286);
-    const rowH = 286 / FRUITS.length;
-    FRUITS.forEach((f, i) => {
-        const cy = rowH * i + rowH / 2;
-        const r  = Math.min(f.r * 0.34, rowH * 0.42);
-        drawFruitAt(guideCtx, r + 5, cy, i);
-        guideCtx.save();
-        guideCtx.fillStyle = 'rgba(255,255,255,0.82)';
-        guideCtx.font      = '10px sans-serif';
-        guideCtx.textAlign = 'left';
-        guideCtx.fillText(f.name, r * 2 + 12, cy + 4);
-        guideCtx.fillStyle = 'rgba(255,215,0,0.65)';
-        guideCtx.font      = '9px sans-serif';
-        guideCtx.fillText(`${f.score}pt`, r * 2 + 12, cy + 15);
-        guideCtx.restore();
-    });
+/* ══════════════════════════════════════════════
+   진화의 고리 — 도넛 링 + 과일
+══════════════════════════════════════════════ */
+function drawEvoRing() {
+    const W=158, H=168;
+    evoCtx.clearRect(0,0,W,H);
+    const cx=W/2, cy=H/2+4;
+    const outerR=68, innerR=32;
+
+    /* ── 링 그림자 ── */
+    evoCtx.save();
+    evoCtx.shadowColor='rgba(0,0,0,0.3)';
+    evoCtx.shadowBlur=10;
+    evoCtx.shadowOffsetY=4;
+
+    /* ── 외부 원 (도넛 바깥) ── */
+    // 링 자체를 그리기 위해 composite shape 사용
+    evoCtx.beginPath();
+    evoCtx.arc(cx, cy, outerR, 0, Math.PI*2, false);
+    evoCtx.arc(cx, cy, innerR, 0, Math.PI*2, true);
+    // 초록빛 그라데이션
+    const ringGrad = evoCtx.createRadialGradient(cx-10, cy-10, innerR, cx, cy, outerR);
+    ringGrad.addColorStop(0, '#a8e060');
+    ringGrad.addColorStop(0.5, '#78c840');
+    ringGrad.addColorStop(1, '#4ea828');
+    evoCtx.fillStyle = ringGrad;
+    evoCtx.fill('evenodd');
+    evoCtx.restore();
+
+    /* ── 링 하이라이트 (상단) ── */
+    evoCtx.save();
+    evoCtx.beginPath();
+    evoCtx.arc(cx, cy, outerR, -Math.PI*0.85, -Math.PI*0.15, false);
+    evoCtx.arc(cx, cy, outerR-8, -Math.PI*0.15, -Math.PI*0.85, true);
+    evoCtx.closePath();
+    evoCtx.fillStyle='rgba(255,255,255,0.28)';
+    evoCtx.fill();
+    evoCtx.restore();
+
+    /* ── 링 테두리 ── */
+    evoCtx.save();
+    evoCtx.beginPath();
+    evoCtx.arc(cx, cy, outerR, 0, Math.PI*2);
+    evoCtx.strokeStyle='rgba(60,160,40,0.6)';
+    evoCtx.lineWidth=2;
+    evoCtx.stroke();
+    evoCtx.beginPath();
+    evoCtx.arc(cx, cy, innerR, 0, Math.PI*2);
+    evoCtx.strokeStyle='rgba(80,180,50,0.4)';
+    evoCtx.lineWidth=1.5;
+    evoCtx.stroke();
+    evoCtx.restore();
+
+    /* ── 중앙 구멍 (크림색) ── */
+    evoCtx.save();
+    evoCtx.beginPath();
+    evoCtx.arc(cx, cy, innerR-1, 0, Math.PI*2);
+    const holeG=evoCtx.createRadialGradient(cx-5,cy-5,2,cx,cy,innerR);
+    holeG.addColorStop(0,'rgba(255,245,210,0.85)');
+    holeG.addColorStop(1,'rgba(240,210,140,0.6)');
+    evoCtx.fillStyle=holeG;
+    evoCtx.fill();
+    evoCtx.restore();
+
+    /* ── 과일 배치 (링 위에) ── */
+    const n=FRUITS.length;
+    const ringCenter=(outerR+innerR)/2;
+    for(let i=0;i<n;i++){
+        // 체리(0)를 왼쪽 상단~, 수박(10)을 상단에
+        const angle=-Math.PI/2 - (Math.PI*2/n)*i;
+        const fx=cx+ringCenter*Math.cos(angle);
+        const fy=cy+ringCenter*Math.sin(angle);
+        // 작은 크기로 그리기
+        const drawR=Math.min(FRUITS[i].r*0.38, 11);
+        drawFruitAt(evoCtx, fx, fy, i, 1, 0, drawR);
+    }
 }
 
-/* ─────────────── 이벤트 ─────────────── */
-function getCursorX(e) {
-    const rect = canvas.getBoundingClientRect();
-    return (e.clientX - rect.left) * (CW / rect.width);
-}
-canvas.addEventListener('mousemove', e => {
-    if (!gameOver) cursorX = getCursorX(e);
-});
-canvas.addEventListener('click', e => {
-    if (!gameOver) { cursorX = getCursorX(e); dropFruit(); }
-});
-canvas.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (!gameOver) cursorX = (e.touches[0].clientX - canvas.getBoundingClientRect().left) * (CW / canvas.getBoundingClientRect().width);
-}, { passive: false });
-canvas.addEventListener('touchend', e => {
-    e.preventDefault();
-    if (!gameOver) dropFruit();
-}, { passive: false });
+/* ══════════════════════════════════════════════
+   이벤트
+══════════════════════════════════════════════ */
+function getCX(e){ const r=canvas.getBoundingClientRect(); return (e.clientX-r.left)*(CW/r.width); }
+canvas.addEventListener('mousemove', e=>{ if(!gameOver) cursorX=getCX(e); });
+canvas.addEventListener('click',     e=>{ if(!gameOver){ cursorX=getCX(e); dropFruit(); } });
+canvas.addEventListener('touchmove', e=>{ e.preventDefault(); if(!gameOver) cursorX=(e.touches[0].clientX-canvas.getBoundingClientRect().left)*(CW/canvas.getBoundingClientRect().width); },{passive:false});
+canvas.addEventListener('touchend',  e=>{ e.preventDefault(); if(!gameOver) dropFruit(); },{passive:false});
 
-/* ─────────────── 터치 버튼 (모바일) ─────────────── */
-const MOVE_STEP = 18; // 한 번 누를 때 이동 px
-let moveInterval = null;
-
-function startMove(dir) {
-    if (gameOver) return;
-    const f = FRUITS[currentIdx];
-    cursorX = Math.max(f.r + 3, Math.min(CW - f.r - 3, cursorX + dir * MOVE_STEP));
-    clearInterval(moveInterval);
-    moveInterval = setInterval(() => {
-        if (gameOver) { clearInterval(moveInterval); return; }
-        cursorX = Math.max(f.r + 3, Math.min(CW - f.r - 3, cursorX + dir * MOVE_STEP));
-    }, 120);
-}
-function stopMove() { clearInterval(moveInterval); moveInterval = null; }
-
-document.getElementById('btn-left').addEventListener('pointerdown',  e => { e.preventDefault(); startMove(-1); });
-document.getElementById('btn-right').addEventListener('pointerdown', e => { e.preventDefault(); startMove(1); });
-document.getElementById('btn-left').addEventListener('pointerup',   stopMove);
-document.getElementById('btn-right').addEventListener('pointerup',  stopMove);
-document.getElementById('btn-left').addEventListener('pointerleave',  stopMove);
-document.getElementById('btn-right').addEventListener('pointerleave', stopMove);
-
-document.getElementById('btn-drop').addEventListener('pointerdown', e => {
-    e.preventDefault();
-    if (!gameOver) dropFruit();
-});
-
-/* ─────────────── 게임 루프 ─────────────── */
-let last = 0;
-function loop(ts) {
-    const dt = Math.min(ts - last, 33);
-    last = ts;
-
-    Engine.update(engine, dt);
+/* ══════════════════════════════════════════════
+   게임 루프
+══════════════════════════════════════════════ */
+let last=0;
+function loop(ts){
+    const dt=Math.min(ts-last,33); last=ts;
+    Engine.update(engine,dt);
     processMerges();
-    if (!gameOver) checkDanger();
-
+    if(!gameOver) checkDanger();
     drawBG();
-    drawWalls();
     drawAllFruits();
     drawDropPreview();
+    drawBox();
     drawParticles();
     drawFloatTexts();
     drawNext();
-
     requestAnimationFrame(loop);
 }
 
-/* ─────────────── 시작 / 재시작 ─────────────── */
-function startGame() {
-    score = 0;
-    gameOver = dropping = false;
-    mergeQueue = []; particles = []; floatTexts = [];
-    dangerTimer = 0; goTimer = null;
-    document.getElementById('score-val').textContent   = '0';
-    document.getElementById('m-score-val').textContent = '0';
+/* ══════════════════════════════════════════════
+   시작 / 재시작
+══════════════════════════════════════════════ */
+function startGame(){
+    score=0; gameOver=dropping=false;
+    mergeQueue=[]; particles=[]; floatTexts=[];
+    dangerTimer=0; goTimer=null;
+    document.getElementById('score-val').textContent='0';
+    document.getElementById('rank-now').textContent='0';
     document.getElementById('overlay').classList.add('hidden');
-
-    if (engine) {
-        Events.off(engine);
-        World.clear(world);
-        Engine.clear(engine);
-    }
+    if(engine){ Events.off(engine); World.clear(world); Engine.clear(engine); }
     initPhysics();
-
-    currentIdx = randIdx();
-    nextIdx    = randIdx();
-    cursorX    = CW / 2;
-    drawGuide();
+    currentIdx=randIdx(); nextIdx=randIdx(); cursorX=CW/2;
+    todayScores=JSON.parse(localStorage.getItem('suika_today')||'[]');
+    updateRankPanel();
+    drawEvoRing();
 }
-
-function restartGame() { startGame(); }
+function restartGame(){ startGame(); }
 
 startGame();
 requestAnimationFrame(loop);
