@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>보어 반지름의 유도</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+:root {
+  --bg: #0a0c14;
+  --card: #161b2e;
+  --accent: #7eb8f7;
+  --accent2: #f4a97f;
+  --accent3: #82e8c0;
+  --muted: #4a5270;
+  --text: #dce4f5;
+  --text2: #8896b8;
+  --border: rgba(126,184,247,0.12);
+  --glow: rgba(126,184,247,0.06);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:'Noto Serif KR',serif;
+  height:100vh; overflow:hidden;
+  display:flex; flex-direction:column;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(126,184,247,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(126,184,247,0.03) 1px,transparent 1px);
+  background-size:48px 48px; pointer-events:none; z-index:0;
+}
+
+/* Back button */
+#back-btn {
+  position:fixed; top:16px; left:20px; z-index:100;
+  display:flex; align-items:center; gap:8px;
+  background:rgba(10,12,20,0.85); backdrop-filter:blur(12px);
+  border:1px solid var(--border); border-radius:8px;
+  padding:8px 16px; color:var(--text2);
+  text-decoration:none; font-family:'DM Mono',monospace; font-size:12px;
+  transition:all .2s; letter-spacing:.04em;
+}
+#back-btn:hover { border-color:var(--accent); color:var(--accent); }
+#back-btn svg { flex-shrink:0; }
+
+#deck { position:relative; z-index:1; flex:1; overflow:hidden; }
+.slide {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  justify-content:center; align-items:center;
+  padding:48px 64px;
+  opacity:0; pointer-events:none;
+  transform:translateX(40px);
+  transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .5s cubic-bezier(.4,0,.2,1);
+}
+.slide.active { opacity:1; pointer-events:all; transform:translateX(0); }
+.slide.exit-left { opacity:0; transform:translateX(-40px); }
+
+#nav {
+  position:relative; z-index:10;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 40px; border-top:1px solid var(--border);
+  background:rgba(10,12,20,0.9); backdrop-filter:blur(12px);
+  gap:16px; flex-shrink:0;
+}
+#slide-counter { font-family:'DM Mono',monospace; font-size:12px; color:var(--muted); min-width:64px; }
+#dots { display:flex; gap:8px; flex:1; justify-content:center; }
+.dot { width:6px; height:6px; border-radius:50%; background:var(--muted); cursor:pointer; transition:background .3s,transform .3s; }
+.dot.active { background:var(--accent); transform:scale(1.4); }
+.nav-btn {
+  background:none; border:1px solid var(--border); color:var(--text2);
+  font-family:'DM Mono',monospace; font-size:12px; padding:8px 20px;
+  border-radius:4px; cursor:pointer; transition:all .2s; letter-spacing:.04em;
+}
+.nav-btn:hover { border-color:var(--accent); color:var(--accent); }
+.nav-btn:disabled { opacity:.2; pointer-events:none; }
+
+.slide-label {
+  font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.18em;
+  color:var(--accent); opacity:.7; text-transform:uppercase;
+  margin-bottom:20px; align-self:flex-start;
+}
+.slide-title {
+  font-family:'Playfair Display',serif; font-size:clamp(28px,4vw,48px);
+  font-weight:700; line-height:1.15; color:#fff;
+  margin-bottom:12px; align-self:flex-start;
+}
+.slide-title em { font-style:italic; color:var(--accent); }
+.slide-sub { font-size:15px; color:var(--text2); line-height:1.7; margin-bottom:28px; align-self:flex-start; max-width:620px; }
+
+.fbox {
+  background:var(--card); border:1px solid var(--border);
+  border-left:3px solid var(--accent); padding:16px 24px;
+  border-radius:4px; margin:8px 0; width:100%;
+  position:relative; overflow:hidden;
+}
+.fbox::after {
+  content:''; position:absolute; top:0; right:0;
+  width:60px; height:100%;
+  background:linear-gradient(90deg,transparent,var(--glow)); pointer-events:none;
+}
+.fbox .flabel {
+  font-family:'DM Mono',monospace; font-size:11px; color:var(--muted);
+  letter-spacing:.1em; text-transform:uppercase; display:block; margin-bottom:10px;
+}
+.fbox .fnote { font-size:12px; color:var(--muted); margin-top:10px; display:block; font-family:'DM Mono',monospace; }
+
+.cols { display:grid; grid-template-columns:1fr 1fr; gap:20px; width:100%; }
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:6px; padding:22px; position:relative; overflow:hidden;
+}
+.card-num {
+  font-family:'DM Mono',monospace; font-size:40px; font-weight:500;
+  color:var(--border); position:absolute; top:12px; right:16px; line-height:1; pointer-events:none;
+}
+.card h3 { font-family:'Playfair Display',serif; font-size:17px; color:var(--accent); margin-bottom:8px; }
+.card p { font-size:14px; color:var(--text2); line-height:1.8; }
+.card .fbox { padding:10px 16px; margin-top:12px; }
+
+.steps { width:100%; display:flex; flex-direction:column; gap:10px; }
+.step {
+  display:flex; align-items:flex-start; gap:16px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:6px; padding:16px 20px;
+}
+.step-n {
+  font-family:'DM Mono',monospace; font-size:11px;
+  color:var(--accent); border:1px solid var(--accent);
+  border-radius:3px; padding:3px 8px; white-space:nowrap;
+  flex-shrink:0; margin-top:3px; letter-spacing:.05em;
+}
+.step-body h4 { font-size:15px; color:var(--text); margin-bottom:4px; }
+.step-body p { font-size:13px; color:var(--text2); line-height:1.7; }
+.sfm {
+  margin-top:8px; background:rgba(126,184,247,0.05);
+  border-left:2px solid var(--accent); padding:8px 14px; border-radius:2px;
+}
+
+.wave-wrap { display:flex; gap:16px; width:100%; justify-content:center; }
+.wave-card {
+  flex:1; background:var(--card); border:1px solid var(--border);
+  border-radius:6px; padding:16px; text-align:center;
+}
+.wave-card.good { border-color:rgba(130,232,192,.3); }
+.wave-card.bad  { border-color:rgba(226,75,74,.3); }
+.wave-card h4 { font-size:13px; margin-bottom:8px; }
+.wave-card.good h4 { color:var(--accent3); }
+.wave-card.bad  h4 { color:#e24b4a; }
+.weq { font-size:13px; color:var(--text2); margin-top:6px; }
+
+#s0 { justify-content:center; align-items:flex-start; padding:80px 80px; }
+#s0 .big-title {
+  font-family:'Playfair Display',serif; font-size:clamp(36px,5.5vw,72px);
+  font-weight:700; line-height:1.1; color:#fff; max-width:700px;
+}
+#s0 .big-title em { color:var(--accent); font-style:italic; }
+#s0 .byline { margin-top:32px; font-family:'DM Mono',monospace; font-size:13px; color:var(--muted); line-height:2.2; }
+#s0 .orb { position:absolute; right:80px; top:50%; transform:translateY(-50%); width:260px; height:260px; }
+
+.result-box {
+  background:linear-gradient(135deg,rgba(126,184,247,0.08),rgba(130,232,192,0.05));
+  border:1px solid rgba(126,184,247,0.25); border-radius:8px;
+  padding:24px 32px; width:100%; text-align:center;
+}
+.rval { font-size:13px; color:var(--accent3); font-family:'DM Mono',monospace; margin-top:8px; }
+.rdesc { font-size:12px; color:var(--text2); margin-top:8px; font-family:'DM Mono',monospace; line-height:1.8; }
+
+.tbl { width:100%; border-collapse:collapse; font-size:14px; }
+.tbl th { text-align:left; padding:10px 16px; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.1em; color:var(--muted); border-bottom:1px solid var(--border); }
+.tbl td { padding:12px 16px; color:var(--text2); border-bottom:1px solid rgba(255,255,255,.04); line-height:1.6; }
+.tbl tr:hover td { background:var(--glow); }
+.tbl td:first-child { font-family:'DM Mono',monospace; color:var(--accent); }
+
+@keyframes orbit { to{transform:rotate(360deg);} }
+@keyframes pulse { 0%,100%{opacity:.6}50%{opacity:1} }
+.electron { animation:orbit 3s linear infinite; transform-origin:130px 130px; }
+.nucleus-glow { animation:pulse 2s ease-in-out infinite; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)} }
+.slide.active .anim { animation:fadeUp .5s ease forwards; opacity:0; }
+.slide.active .anim:nth-child(1){animation-delay:.05s}
+.slide.active .anim:nth-child(2){animation-delay:.15s}
+.slide.active .anim:nth-child(3){animation-delay:.25s}
+.slide.active .anim:nth-child(4){animation-delay:.35s}
+.slide.active .anim:nth-child(5){animation-delay:.45s}
+.slide.active .step:nth-child(1){animation:fadeUp .4s .05s ease forwards;opacity:0}
+.slide.active .step:nth-child(2){animation:fadeUp .4s .18s ease forwards;opacity:0}
+.slide.active .step:nth-child(3){animation:fadeUp .4s .31s ease forwards;opacity:0}
+
+/* MathJax 색상 제어 */
+mjx-container { color:var(--text) !important; }
+.fbox mjx-container { color:var(--accent) !important; }
+.sfm  mjx-container { color:var(--accent) !important; }
+.result-box mjx-container { color:#fff !important; }
+.rval mjx-container { color:var(--accent3) !important; }
+.rdesc mjx-container { color:var(--text2) !important; }
+.green-eq mjx-container { color:var(--accent3) !important; }
+.weq mjx-container { color:var(--text2) !important; }
+.weq.red mjx-container { color:#e24b4a !important; }
+</style>
+</head>
+<body>
+
+<a id="back-btn" href="index.html">
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>
+  홈으로
+</a>
+
+<div id="deck">
+
+  <!-- 0: Title -->
+  <div class="slide active" id="s0">
+    <div>
+      <div class="slide-label anim">물리 | 원자 모형</div>
+      <h1 class="big-title anim">보어 <em>반지름</em>의<br>유도</h1>
+      <div class="byline anim">
+        전기력(쿨롱 힘) → 각운동량 양자화 → 드브로이 물질파<br>
+        수소 원자 바닥 상태 반지름 \(\;a_0 \approx 0.529\,\text{Å}\)
+      </div>
+    </div>
+    <svg class="orb anim" viewBox="0 0 260 260" fill="none">
+      <circle cx="130" cy="130" r="120" stroke="rgba(126,184,247,0.07)" stroke-width="1"/>
+      <circle cx="130" cy="130" r="80"  stroke="rgba(126,184,247,0.10)" stroke-width="1" stroke-dasharray="3 4"/>
+      <circle cx="130" cy="130" r="50"  stroke="rgba(126,184,247,0.14)" stroke-width="1" stroke-dasharray="2 3"/>
+      <circle cx="130" cy="130" r="14" fill="rgba(244,169,127,0.3)" class="nucleus-glow"/>
+      <circle cx="130" cy="130" r="10" fill="#f4a97f" opacity=".8"/>
+      <text x="130" y="134" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="white" opacity=".9">+e</text>
+      <g class="electron">
+        <circle cx="210" cy="130" r="8" fill="#7eb8f7" opacity=".9"/>
+        <circle cx="210" cy="130" r="14" fill="rgba(126,184,247,0.15)"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- 1: Two conditions -->
+  <div class="slide" id="s1">
+    <div class="slide-label anim">개요</div>
+    <h2 class="slide-title anim">유도의 핵심: <em>두 조건</em></h2>
+    <p class="slide-sub anim">두 개의 독립적인 물리 법칙을 연립하면 반지름이 유일하게 결정됩니다.</p>
+    <div class="cols anim">
+      <div class="card">
+        <div class="card-num">①</div>
+        <h3>전기력 = 구심력</h3>
+        <p>쿨롱 힘이 원운동의 구심력을 제공한다는 고전 역학적 조건. 이것만으로는 반지름이 연속적으로 존재합니다.</p>
+        <div class="fbox">\[\frac{ke^2}{r^2} = \frac{m_e v^2}{r}\]</div>
+      </div>
+      <div class="card">
+        <div class="card-num">②</div>
+        <h3>각운동량 양자화</h3>
+        <p>보어의 가정 (드브로이의 물질파로 유도). 이 조건이 반지름을 이산적인 값으로 고정합니다.</p>
+        <div class="fbox">\[m_e v r = n\hbar \quad (n=1,2,3,\ldots)\]</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2: Derivation steps -->
+  <div class="slide" id="s2">
+    <div class="slide-label anim">유도 과정</div>
+    <h2 class="slide-title anim">3단계 <em>유도</em></h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">STEP 01</div>
+        <div class="step-body">
+          <h4>전기력 = 구심력으로 \(m_e v^2\) 표현</h4>
+          <p>\(\dfrac{ke^2}{r^2} = \dfrac{m_e v^2}{r}\) 를 정리하면</p>
+          <div class="sfm">\[\displaystyle m_e v^2 = \frac{ke^2}{r} \qquad \cdots\,(1)\]</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">STEP 02</div>
+        <div class="step-body">
+          <h4>양자화 조건으로 \(v\)를 \(r\)로 표현</h4>
+          <p>\(m_e vr = n\hbar\) 를 \(v\)에 대해 풀면</p>
+          <div class="sfm">\[\displaystyle v = \frac{n\hbar}{m_e r} \qquad \cdots\,(2)\]</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">STEP 03</div>
+        <div class="step-body">
+          <h4>② 를 ① 에 대입하여 \(r\) 풀기</h4>
+          <p>\(\dfrac{n^2\hbar^2}{m_e r^2} = \dfrac{ke^2}{r}\) 에서 양변에 \(r^2\) 곱하면</p>
+          <div class="sfm">\[\displaystyle r_n = \frac{n^2\hbar^2}{m_e k e^2} = n^2 a_0\]</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3: Result -->
+  <div class="slide" id="s3">
+    <div class="slide-label anim">결과</div>
+    <h2 class="slide-title anim">보어 <em>반지름</em></h2>
+    <p class="slide-sub anim">\(n=1\) (바닥 상태)에서의 궤도 반지름이 보어 반지름 \(a_0\)입니다.</p>
+    <div class="result-box anim">
+      <div>\[\displaystyle r_n = \frac{n^2\hbar^2}{m_e k e^2} = n^2\,a_0\]</div>
+      <div class="rval">\(\displaystyle a_0 = \frac{\hbar^2}{m_e k e^2} \approx 0.529\,\text{Å}\)</div>
+      <div class="rdesc">\(\hbar=1.055\times10^{-34}\,\text{J·s}\;\big|\;m_e=9.109\times10^{-31}\,\text{kg}\;\big|\;e=1.602\times10^{-19}\,\text{C}\;\big|\;k=8.988\times10^{9}\,\text{N·m}^2/\text{C}^2\)</div>
+    </div>
+    <div class="cols anim" style="margin-top:16px;">
+      <div class="card">
+        <h3>\(n^2\) 의존성</h3>
+        <p>양자수 \(n\)이 2배가 되면 반지름은 4배 커집니다. 들뜬 상태의 전자는 훨씬 먼 궤도를 돕니다.</p>
+      </div>
+      <div class="card">
+        <h3>물리적 의미</h3>
+        <p>전기력 \(ke^2\)과 전자 관성 \(m_e\), 양자 효과 \(\hbar^2\)의 균형점이 바로 \(a_0\)입니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4: Bohr assumption -->
+  <div class="slide" id="s4">
+    <div class="slide-label anim">양자화의 기원 ①</div>
+    <h2 class="slide-title anim">보어의 <em>가정</em> (1913)</h2>
+    <p class="slide-sub anim">보어는 각운동량 양자화를 왜인지 설명하지 않고, 실험 데이터(수소 스펙트럼)와 일치하기 때문에 <em style="color:var(--accent2)">그냥 가정</em>했습니다.</p>
+    <div class="fbox anim">
+      <span class="flabel">보어의 양자화 가정</span>
+      \[\displaystyle m_e v r = n\hbar \qquad (n = 1,\,2,\,3,\,\ldots)\]
+      <span class="fnote">→ 왜 이것이 성립하는가? 보어는 답하지 못했다.</span>
+    </div>
+    <div class="cols anim" style="margin-top:12px;">
+      <div class="card">
+        <h3>가정의 배경</h3>
+        <p>플랑크의 에너지 양자화 \(E=hf\)와 수소 스펙트럼의 발머 공식을 맞추기 위해 도입. 임시방편적 가정이었으나 결과가 놀랍도록 정확했습니다.</p>
+      </div>
+      <div class="card">
+        <h3>한계</h3>
+        <p>"왜 각운동량이 \(\hbar\)의 정수배여야 하는가?"에 대한 물리적 설명이 없었습니다. 11년 후 드브로이가 답을 제시합니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5: de Broglie -->
+  <div class="slide" id="s5">
+    <div class="slide-label anim">양자화의 기원 ②</div>
+    <h2 class="slide-title anim">드브로이 <em>물질파</em> (1924)</h2>
+    <p class="slide-sub anim">"전자도 파동이다" — 이 한 문장이 보어의 가정을 필연적인 결론으로 바꿉니다.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">가설</div>
+        <div class="step-body">
+          <h4>드브로이 파장</h4>
+          <p>모든 물질 입자는 운동량 \(p\)에 반비례하는 파장을 가진다.</p>
+          <div class="sfm">\[\displaystyle \lambda = \frac{h}{p} = \frac{h}{m_e v}\]</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">정상파 조건</div>
+        <div class="step-body">
+          <h4>궤도에서 파동이 보강 간섭해야 한다</h4>
+          <p>원형 궤도 한 바퀴를 돌면 위상이 정확히 맞아야 함. 그렇지 않으면 소멸.</p>
+          <div class="sfm green-eq">\[\displaystyle 2\pi r = n\lambda = \frac{nh}{m_e v} \quad\Longrightarrow\quad m_e v r = n\hbar\]</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6: Wave visualization -->
+  <div class="slide" id="s6">
+    <div class="slide-label anim">물질파 시각화</div>
+    <h2 class="slide-title anim">정상파 조건: <em>보강</em> vs <em style="color:#e24b4a">상쇄</em></h2>
+    <p class="slide-sub anim">궤도 둘레가 파장의 정수배일 때만 전자 파동이 안정적으로 존재할 수 있습니다.</p>
+    <div class="wave-wrap anim">
+      <div class="wave-card good">
+        <h4>n = 1 &nbsp;✓ 보강 간섭</h4>
+        <svg viewBox="0 0 160 160" width="140" height="140">
+          <circle cx="80" cy="80" r="50" stroke="rgba(130,232,192,.2)" stroke-width="1" fill="none" stroke-dasharray="3 3"/>
+          <circle cx="80" cy="80" r="8" fill="#f4a97f" opacity=".8"/>
+          <path id="w1" fill="none" stroke="#82e8c0" stroke-width="2"/>
+        </svg>
+        <div class="weq">\(2\pi r = 1\cdot\lambda\)</div>
+        <div class="weq">\(m_e vr = \hbar\)</div>
+      </div>
+      <div class="wave-card good">
+        <h4>n = 2 &nbsp;✓ 보강 간섭</h4>
+        <svg viewBox="0 0 160 160" width="140" height="140">
+          <circle cx="80" cy="80" r="50" stroke="rgba(130,232,192,.2)" stroke-width="1" fill="none" stroke-dasharray="3 3"/>
+          <circle cx="80" cy="80" r="8" fill="#f4a97f" opacity=".8"/>
+          <path id="w2" fill="none" stroke="#82e8c0" stroke-width="2"/>
+        </svg>
+        <div class="weq">\(2\pi r = 2\cdot\lambda\)</div>
+        <div class="weq">\(m_e vr = 2\hbar\)</div>
+      </div>
+      <div class="wave-card bad">
+        <h4>n = 1.5 &nbsp;✗ 상쇄 간섭</h4>
+        <svg viewBox="0 0 160 160" width="140" height="140">
+          <circle cx="80" cy="80" r="50" stroke="rgba(226,75,74,.2)" stroke-width="1" fill="none" stroke-dasharray="3 3"/>
+          <circle cx="80" cy="80" r="8" fill="#f4a97f" opacity=".8"/>
+          <path id="w3" fill="none" stroke="#e24b4a" stroke-width="2"/>
+        </svg>
+        <div class="weq">\(2\pi r = 1.5\cdot\lambda\)</div>
+        <div class="weq red" style="color:#e24b4a;">정수 아님 → 불안정</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7: History table -->
+  <div class="slide" id="s7">
+    <div class="slide-label anim">정리</div>
+    <h2 class="slide-title anim">역사적 <em>흐름과 의미</em></h2>
+    <p class="slide-sub anim">보어의 가정은 드브로이에 의해 설명되고, 슈뢰딩거 방정식으로 완성됩니다.</p>
+    <div class="anim" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+      <table class="tbl">
+        <thead>
+          <tr><th>연도 / 인물</th><th>내용</th><th>각운동량 양자화</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1900 &nbsp;플랑크</td>
+            <td>에너지 양자화 \(E = hf\) — 흑체 복사 설명</td>
+            <td>배경 제공</td>
+          </tr>
+          <tr>
+            <td>1913 &nbsp;보어</td>
+            <td>\(m_e vr = n\hbar\) 가정 — 수소 스펙트럼 재현</td>
+            <td style="color:var(--accent2)">근거 없는 가정</td>
+          </tr>
+          <tr>
+            <td>1924 &nbsp;드브로이</td>
+            <td>\(\lambda = h/p\),  정상파 조건 \(2\pi r = n\lambda\)</td>
+            <td style="color:var(--accent3)">물질파로 유도</td>
+          </tr>
+          <tr>
+            <td>1926 &nbsp;슈뢰딩거</td>
+            <td>파동 방정식 \(\Psi\) — 확률적 원자 모형 완성</td>
+            <td style="color:var(--accent)">엄밀하게 완성</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="fbox anim" style="margin-top:16px;text-align:center;">
+      <span style="color:var(--accent2);">각운동량 양자화</span>
+      <span style="color:var(--text2);"> = 전자가 파동이기 때문 = 슈뢰딩거 방정식의 경계 조건</span>
+    </div>
+  </div>
+
+</div>
+
+<div id="nav">
+  <span id="slide-counter">01 / 08</span>
+  <div id="dots"></div>
+  <button class="nav-btn" id="prevBtn" disabled onclick="go(-1)">← prev</button>
+  <button class="nav-btn" id="nextBtn" onclick="go(1)">next →</button>
+</div>
+
+<script>
+function drawWave(id,cx,cy,R,n,amp){
+  let d='';
+  for(let i=0;i<=360;i++){
+    const t=(i/360)*2*Math.PI;
+    const r=R+amp*Math.sin(n*t);
+    d+=(i===0?'M':'L')+(cx+r*Math.cos(t-Math.PI/2)).toFixed(2)+' '+(cy+r*Math.sin(t-Math.PI/2)).toFixed(2);
+  }
+  const el=document.getElementById(id);
+  if(el)el.setAttribute('d',d);
+}
+drawWave('w1',80,80,50,1,8);
+drawWave('w2',80,80,50,2,7);
+drawWave('w3',80,80,50,1.5,8);
+
+const slides=document.querySelectorAll('.slide');
+const total=slides.length;
+let cur=0;
+
+const dotsEl=document.getElementById('dots');
+slides.forEach((_,i)=>{
+  const d=document.createElement('div');
+  d.className='dot'+(i===0?' active':'');
+  d.onclick=()=>goTo(i);
+  dotsEl.appendChild(d);
+});
+
+function updateNav(){
+  document.getElementById('slide-counter').textContent=String(cur+1).padStart(2,'0')+' / '+String(total).padStart(2,'0');
+  document.getElementById('prevBtn').disabled=cur===0;
+  document.getElementById('nextBtn').disabled=cur===total-1;
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===cur));
+}
+
+function goTo(n){
+  if(n===cur)return;
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('exit-left');
+  cur=n; slides[cur].classList.add('active');
+  slides.forEach((s,i)=>{if(i!==cur)setTimeout(()=>s.classList.remove('exit-left'),500);});
+  updateNav();
+}
+
+function go(dir){
+  const next=cur+dir;
+  if(next<0||next>=total)return;
+  const leaving=slides[cur];
+  leaving.classList.remove('active');
+  if(dir>0)leaving.classList.add('exit-left');
+  cur=next; slides[cur].classList.add('active');
+  setTimeout(()=>leaving.classList.remove('exit-left'),500);
+  updateNav();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(-1);
+});
+updateNav();
+</script>
+</body>
+</html>
