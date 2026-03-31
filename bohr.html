@@ -406,7 +406,27 @@ mjx-container { color:var(--text) !important; }
     </div>
   </div>
 
-  <!-- 7: History table -->
+  <!-- 7: Interactive simulator -->
+  <div class="slide" id="s7sim">
+    <div class="slide-label anim">인터랙티브 시뮬레이션</div>
+    <h2 class="slide-title anim">전자 정상파 <em>시뮬레이터</em></h2>
+    <p class="slide-sub anim">주양자수 \(n\)을 바꾸면 \(2\pi r = n\lambda\) 조건을 만족하는 전자 파동의 모양이 달라집니다.</p>
+    <div class="anim" style="display:flex;gap:28px;align-items:center;justify-content:center;width:100%;">
+      <canvas id="bohrCanvas" width="280" height="280" style="background:#000;border-radius:50%;box-shadow:0 0 24px rgba(0,255,255,0.25);flex-shrink:0;"></canvas>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px 28px;min-width:210px;">
+        <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:14px;">주양자수 제어</div>
+        <div style="font-size:14px;color:var(--text2);margin-bottom:10px;">n = <span id="bohrNValue" style="color:var(--accent);font-family:'DM Mono',monospace;font-size:22px;font-weight:500;">3</span></div>
+        <input type="range" id="bohrNSlider" min="1" max="10" value="3" step="1" style="width:180px;accent-color:#7eb8f7;">
+        <div style="margin-top:18px;background:rgba(126,184,247,0.05);border-left:2px solid var(--accent);padding:10px 14px;border-radius:2px;">
+          <div style="font-size:12px;color:var(--accent3);font-family:'DM Mono',monospace;">2πr = nλ 조건 만족</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:5px;font-family:'DM Mono',monospace;">n마디 정상파 형성</div>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--text2);line-height:1.7;">n이 정수일 때만<br>파동이 안정적으로 존재</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8: History table -->
   <div class="slide" id="s7">
     <div class="slide-label anim">정리</div>
     <h2 class="slide-title anim">역사적 <em>흐름과 의미</em></h2>
@@ -513,7 +533,61 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowRight'||e.key==='ArrowDown')go(1);
   if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(-1);
 });
+
+// Touch swipe support
+(function(){
+  let startX=0, startY=0;
+  const deck=document.getElementById('deck');
+  deck.addEventListener('touchstart',e=>{
+    startX=e.touches[0].clientX;
+    startY=e.touches[0].clientY;
+  },{passive:true});
+  deck.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-startX;
+    const dy=e.changedTouches[0].clientY-startY;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){
+      go(dx<0?1:-1);
+    }
+  },{passive:true});
+})();
+
 updateNav();
+
+// Bohr simulator canvas
+(function(){
+  const canvas=document.getElementById('bohrCanvas');
+  const ctx=canvas.getContext('2d');
+  const slider=document.getElementById('bohrNSlider');
+  const nLabel=document.getElementById('bohrNValue');
+  let bohrN=parseInt(slider.value);
+  let t=0;
+  function drawBohr(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const cx=canvas.width/2, cy=canvas.height/2;
+    const R=100, amp=14, pts=300;
+    // nucleus
+    ctx.shadowBlur=18; ctx.shadowColor='#ff3366';
+    ctx.beginPath(); ctx.arc(cx,cy,9,0,Math.PI*2);
+    ctx.fillStyle='#ff3366'; ctx.fill();
+    ctx.shadowBlur=0;
+    // electron wave
+    ctx.beginPath();
+    ctx.lineWidth=2.5; ctx.strokeStyle='#00ffff';
+    ctx.shadowBlur=12; ctx.shadowColor='#00ffff';
+    for(let i=0;i<=pts;i++){
+      const angle=(i/pts)*Math.PI*2;
+      const r=R+amp*Math.sin(bohrN*angle)*Math.cos(t);
+      const x=cx+r*Math.cos(angle), y=cy+r*Math.sin(angle);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.stroke();
+    ctx.shadowBlur=0;
+    t+=0.05;
+    requestAnimationFrame(drawBohr);
+  }
+  slider.oninput=function(){bohrN=parseInt(this.value);nLabel.textContent=bohrN;};
+  drawBohr();
+})();
 </script>
 </body>
 </html>
