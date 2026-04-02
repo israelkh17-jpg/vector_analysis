@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지수 함수 f(t) = exp(-bt + c) 시각화</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+        }
+        .slider-container {
+            transition: all 0.2s ease;
+        }
+        input[type=range] {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-6 md:p-8">
+        <header class="mb-8 text-center">
+            <a href="index.html" class="inline-flex items-center text-sm text-gray-400 hover:text-blue-500 transition-colors mb-4">
+                ← 메인으로 돌아가기
+            </a>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">지수 함수 시뮬레이터</h1>
+            <p class="text-xl text-blue-600 font-mono italic">f(t) = e<sup>-bt + c</sup></p>
+        </header>
+
+        <!-- 차트 영역 -->
+        <div class="relative h-64 md:h-96 w-full mb-8">
+            <canvas id="mainChart"></canvas>
+        </div>
+
+        <!-- 컨트롤 패널 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- B 슬라이더 -->
+            <div class="slider-container bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div class="flex justify-between items-center mb-2">
+                    <label for="bSlider" class="text-sm font-semibold text-gray-700">감쇠 계수 (b)</label>
+                    <span id="bValue" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">1.0</span>
+                </div>
+                <input type="range" id="bSlider" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>0.1</span>
+                    <span>5.0</span>
+                </div>
+            </div>
+
+            <!-- C 슬라이더 -->
+            <div class="slider-container bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div class="flex justify-between items-center mb-2">
+                    <label for="cSlider" class="text-sm font-semibold text-gray-700">상수 (c)</label>
+                    <span id="cValue" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold">0.0</span>
+                </div>
+                <input type="range" id="cSlider" min="-3.0" max="3.0" step="0.1" value="0.0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600">
+                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>-3.0</span>
+                    <span>3.0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 설명문 -->
+        <div class="mt-8 pt-6 border-t border-gray-100 text-sm text-gray-500 leading-relaxed">
+            <ul class="list-disc pl-5 space-y-1">
+                <li><strong>b (감쇠율):</strong> 값이 클수록 곡선이 더 급격하게 0으로 수렴합니다.</li>
+                <li><strong>c (오프셋):</strong> 값이 크면 그래프가 위로(또는 오른쪽으로) 이동하며 시작점이 높아집니다.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        const bSlider = document.getElementById('bSlider');
+        const cSlider = document.getElementById('cSlider');
+        const bValueDisplay = document.getElementById('bValue');
+        const cValueDisplay = document.getElementById('cValue');
+
+        function getChartData(b, c) {
+            const labels = [];
+            const data = [];
+            for (let t = 0; t <= 10; t += 0.1) {
+                labels.push(t.toFixed(1));
+                const y = Math.exp((-b * t) + c);
+                data.push(y);
+            }
+            return { labels, data };
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const initialData = getChartData(parseFloat(bSlider.value), parseFloat(cSlider.value));
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: initialData.labels,
+                    datasets: [{
+                        label: 'f(t)',
+                        data: initialData.data,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: '시간 (t)', font: { weight: 'bold' } },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        y: {
+                            title: { display: true, text: '함숫값 f(t)', font: { weight: 'bold' } },
+                            grid: { color: '#f1f5f9' },
+                            suggestedMax: 2,
+                            min: 0
+                        }
+                    },
+                    animation: {
+                        duration: 400
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            const b = parseFloat(bSlider.value);
+            const c = parseFloat(cSlider.value);
+
+            bValueDisplay.textContent = b.toFixed(1);
+            cValueDisplay.textContent = c.toFixed(1);
+
+            const newData = getChartData(b, c);
+            chart.data.datasets[0].data = newData.data;
+            chart.update();
+        }
+
+        bSlider.addEventListener('input', updateChart);
+        cSlider.addEventListener('input', updateChart);
+
+        window.onload = initChart;
+    </script>
+</body>
+</html>
