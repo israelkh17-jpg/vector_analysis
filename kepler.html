@@ -320,7 +320,6 @@ section {
   max-width: 100%;
   box-sizing: border-box;
 }
-}
 
 .slider-wrap {
   margin-top: 1.2rem;
@@ -1062,8 +1061,8 @@ window.addEventListener('resize', ()=>{
   const h_e = Math.ceil((w_e / 460) * 340);
   eCanvas.width = w_e;
   eCanvas.height = h_e;
-  updateEllipse(document.getElementById('ecc').value);
-  
+  updateEllipse(document.getElementById('ecc-slider').value);
+
   const rect_o = oCanvas.parentElement.getBoundingClientRect();
   const w_o = Math.max(Math.ceil(rect_o.width), 320);
   const h_o = Math.ceil((w_o / 460) * 380);
@@ -1071,6 +1070,7 @@ window.addEventListener('resize', ()=>{
   oCanvas.height = h_o;
   OW = w_o;
   OH = h_o;
+  calcOrbitParams();
   drawOrbit(angle);
 });
 
@@ -1118,8 +1118,8 @@ function drawEllipse(e) {
   const c = a * e;                     // 중심→초점 거리
   const b = Math.sqrt(Math.max(1, a*a - c*c)); // 단반경
 
-  // 타원 중심: 화면 오른쪽으로 조정
-  const ex = W * 0.62;
+  // 타원 중심: 캔버스 정중앙에 배치 (모바일에서 잘리지 않도록)
+  const ex = W * 0.50;
   const ey = H / 2;
 
   // 두 초점
@@ -1234,16 +1234,21 @@ let OW = oCanvas.width, OH = oCanvas.height;
 // ── 궤도 파라미터 ──────────────────────────────────────────────────
 // 태양은 오른쪽 초점에 위치.
 // 타원 중심 = 캔버스 중앙보다 c만큼 왼쪽 → 태양이 화면 중앙 부근에 오도록
-const ORB_a = 170;          // 장반경 (px)
 const ORB_e = 0.60;         // 이심률
-const ORB_b = ORB_a * Math.sqrt(1 - ORB_e * ORB_e); // 단반경
-const ORB_c = ORB_a * ORB_e; // 중심→초점 거리
+let ORB_a, ORB_b, ORB_c, SUN_SX, SUN_SY, EL_CX, EL_CY;
 
-// 타원 중심 스크린 좌표 (태양이 오른쪽 초점이므로 중심은 태양보다 c만큼 왼쪽)
-const SUN_SX = OW * 0.68;   // 태양 x (오른쪽 초점)
-const SUN_SY = OH * 0.50;   // 태양 y
-const EL_CX  = SUN_SX - ORB_c; // 타원 중심 x = 태양 - c
-const EL_CY  = SUN_SY;
+function calcOrbitParams() {
+  // 캔버스 크기에 비례한 장반경 — 모바일에서도 타원 전체가 들어오도록
+  ORB_a = Math.min(OW, OH) * 0.36;
+  ORB_b = ORB_a * Math.sqrt(1 - ORB_e * ORB_e);
+  ORB_c = ORB_a * ORB_e;
+  // 타원 중심을 캔버스 중앙에 배치 → 좌우로 각각 ORB_a씩 여유
+  EL_CX = OW * 0.50;
+  EL_CY = OH * 0.50;
+  SUN_SX = EL_CX + ORB_c;  // 태양 = 타원 중심에서 c만큼 오른쪽 (오른쪽 초점)
+  SUN_SY = EL_CY;
+}
+calcOrbitParams();
 
 // 스크린 좌표 변환:
 // 타원 중심 기준 로컬 좌표 (lx, ly) → 스크린
