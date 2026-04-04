@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>중력렌즈 | Flying Physics</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<style>
+:root {
+  --bg: #07091a;
+  --card: rgba(255,255,255,0.05);
+  --card-b: rgba(255,255,255,0.1);
+  --text: #e2e8f0;
+  --sub: #94a3b8;
+  --accent: #60a5fa;
+  --accent2: #a78bfa;
+  --gold: #fbbf24;
+  --green: #34d399;
+  --pink: #f472b6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.8;
+  min-height: 100vh;
+}
+#stars-bg {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0; pointer-events: none;
+}
+header, .nav-wrap, main, footer { position: relative; z-index: 1; }
+
+/* Header */
+header {
+  background: linear-gradient(135deg, #050d24 0%, #120830 50%, #050e22 100%);
+  color: white;
+  padding: 32px 40px 28px;
+  border-bottom: 1px solid rgba(96,165,250,0.15);
+}
+.header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.home-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.08); color: white; text-decoration: none;
+  padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.18); transition: background 0.2s;
+}
+.home-btn:hover { background: rgba(255,255,255,0.16); }
+.header-badge {
+  display: inline-block;
+  background: rgba(96,165,250,0.15); color: var(--accent);
+  font-size: 11px; font-weight: 700; padding: 3px 12px;
+  border-radius: 20px; letter-spacing: 0.06em; margin-bottom: 10px;
+  border: 1px solid rgba(96,165,250,0.25);
+}
+header h1 {
+  font-size: 2.2rem; font-weight: 800; margin-bottom: 8px;
+  background: linear-gradient(100deg, #e2e8f0 0%, #60a5fa 50%, #a78bfa 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+header p { font-size: 0.95rem; color: #7e92b4; }
+
+/* Nav */
+.nav-wrap {
+  background: rgba(5,7,20,0.92); backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 2px 24px rgba(0,0,0,0.6);
+}
+.nav-tabs { display: flex; max-width: 900px; margin: 0 auto; overflow-x: auto; scrollbar-width: none; }
+.nav-tabs::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: none; background: none; border: none;
+  color: rgba(255,255,255,0.45); font-size: 0.9rem; font-weight: 600;
+  padding: 14px 20px; cursor: pointer;
+  border-bottom: 3px solid transparent; transition: all 0.2s;
+  white-space: nowrap; font-family: inherit;
+}
+.tab-btn:hover { color: white; background: rgba(255,255,255,0.04); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Main */
+main { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
+.section { display: none; animation: fadeIn 0.3s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+/* Sec title */
+.sec-title { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.sec-num {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 800; flex-shrink: 0;
+}
+.sec-title h2 { font-size: 1.4rem; font-weight: 800; }
+
+/* Card */
+.card {
+  background: var(--card); border: 1px solid var(--card-b);
+  border-radius: 16px; padding: 24px 28px; margin-bottom: 20px;
+  backdrop-filter: blur(4px);
+}
+.key-box {
+  background: rgba(96,165,250,0.07); border-left: 4px solid var(--accent);
+  border-radius: 10px; padding: 16px 20px; margin: 16px 0;
+}
+.key-box .key-label {
+  font-size: 0.76rem; font-weight: 700; color: var(--accent);
+  letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 6px;
+}
+.key-box p { font-size: 0.95rem; }
+.think-box {
+  background: rgba(251,191,36,0.07); border-left: 4px solid var(--gold);
+  border-radius: 10px; padding: 16px 20px; margin: 16px 0;
+}
+.think-box .think-label { font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+.formula-box {
+  background: rgba(167,139,250,0.07); border: 1px solid rgba(167,139,250,0.18);
+  border-radius: 12px; padding: 20px; margin: 16px 0; text-align: center;
+}
+.formula-box .formula-label {
+  font-size: 0.78rem; color: var(--accent2); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px;
+}
+
+/* Table */
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+th {
+  background: rgba(96,165,250,0.12); color: var(--accent);
+  padding: 11px 14px; text-align: center; font-weight: 700;
+  border: 1px solid rgba(96,165,250,0.18);
+}
+td { padding: 9px 14px; text-align: center; border: 1px solid rgba(255,255,255,0.07); }
+tr:nth-child(even) td { background: rgba(255,255,255,0.03); }
+tr:hover td { background: rgba(96,165,250,0.07); }
+
+/* Canvas */
+.canvas-wrap {
+  border-radius: 14px; overflow: hidden; margin: 18px 0;
+  background: #010210; border: 1px solid rgba(96,165,250,0.12);
+}
+.sim-canvas { width: 100%; display: block; }
+.slider-group {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 14px 18px; background: rgba(0,0,0,0.35);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.slider-row { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
+.slider-row label { font-size: 0.86rem; color: var(--sub); white-space: nowrap; min-width: 72px; }
+.slider-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.slider-val { font-size: 0.86rem; color: var(--accent); font-weight: 700; min-width: 80px; text-align: right; }
+
+/* Lens type grid */
+.lens-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(248px,1fr)); gap: 16px; margin: 18px 0; }
+.lens-card {
+  background: var(--card); border: 1px solid var(--card-b);
+  border-radius: 14px; padding: 18px 20px; position: relative; overflow: hidden;
+}
+.lens-card::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--lc, var(--accent));
+}
+.lens-type { font-size: 0.75rem; font-weight: 700; color: var(--lc, var(--accent)); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+.lens-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+.lens-card p { font-size: 0.87rem; color: var(--sub); line-height: 1.6; }
+.lens-mini { display: block; border-radius: 8px; background: #000212; margin: 12px auto; }
+.lens-card .lens-example { margin-top: 10px; font-size: 0.82rem; color: var(--sub); padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.07); }
+.lens-card .lens-example strong { color: var(--text); }
+
+/* Dark matter card */
+.dark-card {
+  background: linear-gradient(135deg, rgba(109,40,217,0.12), rgba(12,16,50,0.4));
+  border: 1px solid rgba(167,139,250,0.18); border-radius: 14px; padding: 22px 24px; margin: 18px 0;
+}
+.dark-card h3 { color: var(--accent2); margin-bottom: 12px; font-size: 1rem; }
+.dark-card p { font-size: 0.92rem; color: var(--sub); line-height: 1.7; }
+
+/* Compare grid */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+.compare-card { border-radius: 12px; padding: 20px; text-align: center; }
+.compare-card.newton { background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.2); }
+.compare-card.einstein { background: rgba(96,165,250,0.07); border: 1px solid rgba(96,165,250,0.2); }
+.compare-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; }
+.compare-card.newton h3 { color: var(--gold); }
+.compare-card.einstein h3 { color: var(--accent); }
+.compare-card p { font-size: 0.88rem; color: var(--sub); line-height: 1.65; }
+.compare-card .val { font-size: 1.6rem; font-weight: 800; margin: 10px 0; }
+.compare-card.newton .val { color: var(--gold); }
+.compare-card.einstein .val { color: var(--accent); }
+
+/* Timeline */
+.timeline { margin: 18px 0; }
+.timeline-item {
+  display: flex; gap: 16px; padding: 14px 0 14px 20px;
+  border-left: 2px solid rgba(96,165,250,0.25); position: relative; margin-left: 10px;
+}
+.timeline-item::before {
+  content: ""; position: absolute; left: -7px; top: 22px;
+  width: 12px; height: 12px; background: var(--accent);
+  border-radius: 50%; border: 2px solid var(--bg);
+}
+.timeline-year { font-size: 0.84rem; font-weight: 700; color: var(--accent); min-width: 42px; padding-top: 2px; }
+.timeline-content { font-size: 0.92rem; line-height: 1.65; }
+.timeline-content strong { color: var(--text); }
+
+/* Item list */
+.item-list { list-style: none; }
+.item-list li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.94rem; line-height: 1.65; }
+.item-list li:last-child { border-bottom: none; }
+.item-num {
+  width: 26px; height: 26px; background: rgba(96,165,250,0.12); color: var(--accent);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+}
+
+/* Quiz */
+.quiz-card {
+  background: var(--card); border: 1px solid var(--card-b);
+  border-radius: 14px; padding: 18px 22px; margin-bottom: 14px;
+}
+.quiz-q { font-size: 0.98rem; font-weight: 600; margin-bottom: 14px; line-height: 1.65; }
+.q-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; background: var(--accent); color: white;
+  border-radius: 50%; font-size: 0.82rem; font-weight: 700; margin-right: 8px; flex-shrink: 0;
+}
+.quiz-btns { display: flex; gap: 10px; }
+.ox-btn {
+  padding: 8px 24px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04); color: var(--text);
+  font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit;
+}
+.ox-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.28); }
+.ox-btn.correct { background: rgba(52,211,153,0.12); border-color: var(--green); color: var(--green); }
+.ox-btn.wrong { background: rgba(248,113,113,0.12); border-color: #f87171; color: #f87171; }
+.quiz-feedback {
+  display: none; margin-top: 12px; padding: 10px 14px;
+  border-radius: 8px; font-size: 0.9rem; line-height: 1.65;
+}
+.quiz-feedback.show { display: block; }
+.quiz-feedback.ok { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.18); color: #86efac; }
+.quiz-feedback.no { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.18); color: #fca5a5; }
+
+/* Calc box */
+.calc-box {
+  background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 22px; margin: 18px 0;
+}
+.calc-title { font-size: 0.85rem; font-weight: 700; color: var(--gold); margin-bottom: 14px; letter-spacing: 0.04em; }
+.calc-step { padding: 8px 0; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #cbd5e1; line-height: 1.75; }
+.calc-step:last-child { border-bottom: none; }
+.step-label { font-size: 0.78rem; color: var(--sub); display: block; margin-bottom: 4px; }
+
+/* Answer toggle */
+.answer-toggle {
+  display: inline-block; margin-top: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white; border: none; border-radius: 8px;
+  padding: 9px 20px; cursor: pointer; font-size: 0.88rem;
+  font-family: inherit; font-weight: 600; transition: opacity 0.2s;
+}
+.answer-toggle:hover { opacity: 0.82; }
+.answer-box {
+  display: none; margin-top: 14px;
+  background: rgba(52,211,153,0.07); border-left: 4px solid var(--green);
+  border-radius: 8px; padding: 14px 18px; font-size: 0.92rem; line-height: 1.85; color: #86efac;
+}
+.answer-box.open { display: block; }
+
+/* Summary grid */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px,1fr)); gap: 14px; margin: 18px 0; }
+.summary-card {
+  background: var(--card); border: 1px solid var(--card-b);
+  border-radius: 12px; padding: 18px; text-align: center;
+}
+.sum-icon { font-size: 2rem; margin-bottom: 10px; }
+.summary-card h4 { font-size: 0.93rem; font-weight: 700; margin-bottom: 6px; color: var(--accent); }
+.summary-card p { font-size: 0.84rem; color: var(--sub); line-height: 1.55; }
+
+/* Link box */
+.link-box {
+  background: rgba(96,165,250,0.05); border: 1px solid rgba(96,165,250,0.13);
+  border-radius: 10px; padding: 13px 18px; margin: 10px 0; font-size: 0.9rem;
+}
+.link-box a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.link-box a:hover { text-decoration: underline; }
+
+/* Footer */
+footer {
+  text-align: center; padding: 22px; color: var(--sub);
+  font-size: 0.88rem; border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.25); position: relative; z-index: 1;
+}
+
+@media (max-width: 600px) {
+  header { padding: 22px 18px 18px; }
+  header h1 { font-size: 1.55rem; }
+  .compare-grid { grid-template-columns: 1fr; }
+  .lens-grid { grid-template-columns: 1fr; }
+  .summary-grid { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<canvas id="stars-bg"></canvas>
+
+<header>
+  <div class="header-top">
+    <a href="index.html" class="home-btn">← Flying Physics</a>
+  </div>
+  <div class="header-badge">물리학2 역학적 상호작용</div>
+  <h1>중력렌즈</h1>
+  <p>빛도 중력에 의해 휜다 — 일반 상대성이론이 예측한 우주의 눈</p>
+</header>
+
+<nav class="nav-wrap">
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab(0)">🌌 개념 도입</button>
+    <button class="tab-btn" onclick="switchTab(1)">⚙️ 시뮬레이션</button>
+    <button class="tab-btn" onclick="switchTab(2)">🔭 렌즈 분류</button>
+    <button class="tab-btn" onclick="switchTab(3)">✏️ 탐구 활동</button>
+    <button class="tab-btn" onclick="switchTab(4)">📋 정리</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- ===== 1. 개념 도입 ===== -->
+<section id="sec-0" class="section active">
+  <div class="sec-title">
+    <div class="sec-num">1</div>
+    <h2>개념 도입 — 빛도 휜다?</h2>
+  </div>
+
+  <div class="card">
+    <p style="font-size:1.04rem; line-height:1.95;">
+      우리는 빛이 직진한다고 배웠습니다. 그런데 만약 빛이 <strong style="color:var(--accent)">거대한 질량 근처를 지나면</strong> 어떻게 될까요?
+      빛을 굴절시키는 것은 유리가 아니라 바로 <strong style="color:var(--gold)">시공간의 곡률</strong>입니다.
+    </p>
+    <div class="key-box">
+      <div class="key-label">핵심 개념</div>
+      <p>질량이 큰 천체 주변에서 시공간이 휘어지고, 빛은 그 휜 시공간을 따라 이동하기 때문에 경로가 굴절되는 것처럼 보입니다. 이를 <strong>중력렌즈 효과(Gravitational Lensing)</strong>라고 합니다.</p>
+    </div>
+    <div style="margin-top:18px;">
+      <strong style="color:var(--accent2);">직관적 비유 — 트램펄린 모형</strong>
+      <ul class="item-list" style="margin-top:10px;">
+        <li><span class="item-num">1</span><span>볼링공을 트램펄린 위에 올리면 주변이 움푹 파입니다 → <strong>시공간 곡률</strong></span></li>
+        <li><span class="item-num">2</span><span>구슬(빛)을 트램펄린 위로 굴리면 볼링공 쪽으로 휘어집니다 → <strong>중력렌즈 효과</strong></span></li>
+        <li><span class="item-num">3</span><span>볼링공이 무거울수록 더 깊이 파이고, 구슬이 더 크게 휩니다 → <strong>질량 ↑ = 렌즈 효과 ↑</strong></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:18px;">뉴턴 vs 아인슈타인 — 빛의 편향각 예측</h3>
+    <div class="compare-grid">
+      <div class="compare-card newton">
+        <h3>뉴턴 역학</h3>
+        <p>빛을 질량 있는 입자로 취급하여 중력 가속도의 영향을 계산</p>
+        <div class="val">0.87"</div>
+        <p style="font-size:0.82rem;">태양 가장자리 통과 시 편향각(각초)</p>
+      </div>
+      <div class="compare-card einstein">
+        <h3>일반 상대성이론</h3>
+        <p>시공간 자체가 휘어지므로 뉴턴 예측의 <strong style="color:var(--accent)">정확히 2배</strong> 편향</p>
+        <div class="val">1.75"</div>
+        <p style="font-size:0.82rem;">태양 가장자리 통과 시 편향각(각초)</p>
+      </div>
+    </div>
+    <div class="think-box">
+      <div class="think-label">💡 생각해보기</div>
+      뉴턴 역학이 맞으면 0.87", 일반상대성이론이 맞으면 1.75"가 관측되어야 합니다. 실제 관측 결과는 어느 쪽에 더 가까울까요?
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:18px;">역사적 순간 — 1919년 개기일식 관측</h3>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-year">1915</div>
+        <div class="timeline-content"><strong>아인슈타인</strong>이 일반 상대성이론을 완성하고 태양 근처 별빛 편향을 1.75"로 예측</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-year">1919</div>
+        <div class="timeline-content"><strong>아서 에딩턴</strong> 팀이 서아프리카·브라질에서 개기일식을 이용해 태양 뒤편 별의 위치를 관측<br>→ 측정값: <strong style="color:var(--accent)">1.75" ± 0.09"</strong> — 아인슈타인 예측과 일치!</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-year">1919</div>
+        <div class="timeline-content">The Times 1면: <em>"빛이 휜다 — 뉴턴의 이론 타도"</em><br>아인슈타인이 세계적 명성을 얻게 된 역사적 사건</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-year">현재</div>
+        <div class="timeline-content">허블·제임스 웹 우주망원경 등으로 수천 개 중력렌즈 사례를 관측 중</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 2. 시뮬레이션 ===== -->
+<section id="sec-1" class="section">
+  <div class="sec-title">
+    <div class="sec-num">2</div>
+    <h2>핵심 원리 인터랙티브 시뮬레이션</h2>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:10px;">🕸️ 시뮬레이션 1: 시공간 곡률 시각화</h3>
+    <p style="font-size:0.88rem; color:var(--sub); margin-bottom:14px;">질량 슬라이더를 움직여 천체 주변 시공간 격자가 어떻게 왜곡되는지 확인하세요.</p>
+    <div class="canvas-wrap">
+      <canvas id="gridCanvas" class="sim-canvas" height="280"></canvas>
+      <div class="slider-group">
+        <div class="slider-row">
+          <label>천체 질량</label>
+          <input type="range" id="massSlider" min="0" max="100" value="50" oninput="updateGrid()">
+          <span class="slider-val" id="massVal">M☉ × 50</span>
+        </div>
+      </div>
+    </div>
+    <div class="key-box" style="margin-top:10px;">
+      <div class="key-label">읽는 법</div>
+      <p>격자가 천체 주변에서 안쪽으로 빨려들듯 휘어집니다. 질량이 0일 때는 완전히 평평한 시공간(민코프스키 공간)이 됩니다. 질량이 클수록 빛 경로가 더 크게 꺾입니다.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:10px;">✨ 시뮬레이션 2: 빛의 경로 편향 & 아인슈타인 고리</h3>
+    <p style="font-size:0.88rem; color:var(--sub); margin-bottom:14px;">"정렬도" 슬라이더로 광원·렌즈·관측자의 배치를 바꿔 보세요. 완벽히 정렬되면 아인슈타인 고리가 나타납니다!</p>
+    <div class="canvas-wrap">
+      <canvas id="lensCanvas" class="sim-canvas" height="320"></canvas>
+      <div class="slider-group">
+        <div class="slider-row">
+          <label>정렬도</label>
+          <input type="range" id="alignSlider" min="-100" max="100" value="60" oninput="updateLens()">
+          <span class="slider-val" id="alignVal">어긋남</span>
+        </div>
+        <div class="slider-row">
+          <label>렌즈 질량</label>
+          <input type="range" id="lensMassSlider" min="10" max="100" value="50" oninput="updateLens()">
+          <span class="slider-val" id="lensMassVal">M☉ × 50</span>
+        </div>
+      </div>
+    </div>
+    <div class="key-box" style="margin-top:10px;">
+      <div class="key-label">관찰 포인트</div>
+      <p>정렬이 어긋나면 빛이 두 방향으로 굴절되어 <strong>2개의 상(image)</strong>이 생깁니다. 완벽히 정렬되면 빛이 사방으로 균등하게 굴절되어 <strong style="color:var(--gold);">아인슈타인 고리</strong>가 형성됩니다.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:16px;">📐 아인슈타인 고리 반경 공식</h3>
+    <div class="formula-box">
+      <div class="formula-label">Einstein Ring Angular Radius</div>
+      <div>$$\theta_E = \sqrt{\frac{4GM}{c^2} \cdot \frac{D_{LS}}{D_L \cdot D_S}}$$</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>기호</th><th>의미</th><th>단위</th></tr>
+        <tr><td>$G$</td><td>만유인력 상수</td><td>$6.674\times10^{-11}$ N·m²/kg²</td></tr>
+        <tr><td>$M$</td><td>렌즈 천체 질량</td><td>kg</td></tr>
+        <tr><td>$c$</td><td>빛의 속도</td><td>$3\times10^8$ m/s</td></tr>
+        <tr><td>$D_L$</td><td>관측자 → 렌즈 거리</td><td>m</td></tr>
+        <tr><td>$D_S$</td><td>관측자 → 광원 거리</td><td>m</td></tr>
+        <tr><td>$D_{LS}$</td><td>렌즈 → 광원 거리</td><td>m</td></tr>
+      </table>
+    </div>
+    <div class="think-box">
+      <div class="think-label">💡 공식에서 읽어낼 수 있는 것</div>
+      <ul class="item-list">
+        <li><span class="item-num">→</span><span>렌즈 질량 $M$ ↑ → $\theta_E$ ↑ → 더 큰 아인슈타인 고리</span></li>
+        <li><span class="item-num">→</span><span>렌즈가 중간쯤 있을 때 ($D_{LS}\approx D_L$) → $\theta_E$ 최대</span></li>
+        <li><span class="item-num">→</span><span>광원이 매우 멀 때 ($D_S\gg D_L$) → $\theta_E$ 감소</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3. 렌즈 분류 ===== -->
+<section id="sec-2" class="section">
+  <div class="sec-title">
+    <div class="sec-num">3</div>
+    <h2>중력렌즈 유형 분류</h2>
+  </div>
+
+  <div class="card">
+    <p style="margin-bottom:16px;">정렬 상태와 렌즈 강도에 따라 세 가지 유형으로 분류됩니다.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>유형</th><th>정렬 조건</th><th>관측 현상</th><th>대표 사례</th></tr>
+        <tr>
+          <td><strong style="color:var(--accent)">강한 렌즈</strong></td>
+          <td>매우 정확한 정렬</td>
+          <td>아인슈타인 고리, 아크, 다중상</td>
+          <td>Abell 2218 은하단</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--green)">약한 렌즈</strong></td>
+          <td>약간 어긋난 정렬</td>
+          <td>이미지 약간 늘어남·찌그러짐</td>
+          <td>총알 은하단 암흑물질 지도</td>
+        </tr>
+        <tr>
+          <td><strong style="color:var(--pink)">미시 렌즈</strong></td>
+          <td>별 하나가 렌즈</td>
+          <td>배경 별 밝기 일시 증폭</td>
+          <td>OGLE, KMTNet 외계행성 탐색</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="lens-grid">
+    <div class="lens-card" style="--lc: var(--accent);">
+      <div class="lens-type">Strong Lensing</div>
+      <h3>강한 렌즈</h3>
+      <p>렌즈·광원·관측자가 거의 완벽히 정렬될 때 나타납니다. 빛이 사방으로 크게 꺾이며 고리나 아크를 형성합니다.</p>
+      <canvas class="lens-mini" id="c-strong" width="210" height="110"></canvas>
+      <p style="font-size:0.84rem; color:var(--sub);"><strong style="color:var(--text)">특징:</strong> 아인슈타인 고리, 호(arc), 다중상<br><strong style="color:var(--text)">조건:</strong> $\theta_{source} < \theta_E$</p>
+      <div class="lens-example"><strong>실제 사례:</strong> Abell 2218 은하단(허블 촬영), SL2S J08544</div>
+    </div>
+
+    <div class="lens-card" style="--lc: var(--green);">
+      <div class="lens-type">Weak Lensing</div>
+      <h3>약한 렌즈</h3>
+      <p>정렬이 약간 어긋났을 때 발생합니다. 개별 은하 하나에서는 미미하지만, 수천 개의 통계로 신호를 검출합니다.</p>
+      <canvas class="lens-mini" id="c-weak" width="210" height="110"></canvas>
+      <p style="font-size:0.84rem; color:var(--sub);"><strong style="color:var(--text)">특징:</strong> 배경 은하가 접선 방향으로 늘어남<br><strong style="color:var(--text)">응용:</strong> 암흑물질 분포 지도 작성</p>
+      <div class="lens-example"><strong>실제 사례:</strong> 총알 은하단(Bullet Cluster) 암흑물질 지도</div>
+    </div>
+
+    <div class="lens-card" style="--lc: var(--pink);">
+      <div class="lens-type">Micro Lensing</div>
+      <h3>미시 렌즈</h3>
+      <p>별 하나가 렌즈 역할을 합니다. 배경 별 밝기가 일시적으로 증폭되며 광도 변화 곡선으로 렌즈 천체를 검출합니다.</p>
+      <canvas class="lens-mini" id="c-micro" width="210" height="110"></canvas>
+      <p style="font-size:0.84rem; color:var(--sub);"><strong style="color:var(--text)">특징:</strong> 시간에 따른 종 모양 밝기 곡선<br><strong style="color:var(--text)">응용:</strong> 외계행성, MACHO 탐색</p>
+      <div class="lens-example"><strong>실제 사례:</strong> OGLE 프로젝트, 한국 KMTNet</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:14px;">🌑 보이지 않는 질량도 볼 수 있다</h3>
+    <div class="dark-card">
+      <h3>암흑물질 (Dark Matter)</h3>
+      <p>암흑물질은 빛을 방출하거나 흡수하지 않아 직접 관측이 불가능합니다. 그러나 <strong style="color:var(--text)">중력렌즈는 오직 질량에만 반응</strong>하기 때문에, 배경 천체들의 빛이 왜곡되는 패턴을 분석하면 보이지 않는 질량의 분포를 역으로 추적할 수 있습니다.</p>
+      <div style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(167,139,250,0.12);">
+        <strong style="color:var(--accent2);">총알 은하단 (Bullet Cluster, 2006)</strong><br>
+        <span style="font-size:0.9rem; color:var(--sub);">두 은하단이 충돌했는데, X선으로 보이는 일반 물질의 중심과 중력렌즈로 추적한 질량 중심이 <strong style="color:var(--text)">서로 다른 위치</strong>에 있었습니다. 암흑물질 존재를 가장 강력하게 보여준 시각적 증거입니다.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4. 탐구 활동 ===== -->
+<section id="sec-3" class="section">
+  <div class="sec-title">
+    <div class="sec-num">4</div>
+    <h2>탐구 활동</h2>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:20px;">📝 형성평가 — O/X 퀴즈</h3>
+
+    <div class="quiz-card">
+      <div class="quiz-q"><span class="q-badge">1</span>중력렌즈 효과는 뉴턴 역학만으로 완전히 설명할 수 있다.</div>
+      <div class="quiz-btns">
+        <button class="ox-btn" onclick="checkQuiz(0,'O')">O</button>
+        <button class="ox-btn" onclick="checkQuiz(0,'X')">X</button>
+      </div>
+      <div class="quiz-feedback" id="qf-0"></div>
+    </div>
+
+    <div class="quiz-card">
+      <div class="quiz-q"><span class="q-badge">2</span>아인슈타인 고리는 광원·렌즈·관측자가 완전히 일직선일 때 나타난다.</div>
+      <div class="quiz-btns">
+        <button class="ox-btn" onclick="checkQuiz(1,'O')">O</button>
+        <button class="ox-btn" onclick="checkQuiz(1,'X')">X</button>
+      </div>
+      <div class="quiz-feedback" id="qf-1"></div>
+    </div>
+
+    <div class="quiz-card">
+      <div class="quiz-q"><span class="q-badge">3</span>약한 렌즈 효과는 은하 하나의 이미지만으로도 명확하게 관측할 수 있다.</div>
+      <div class="quiz-btns">
+        <button class="ox-btn" onclick="checkQuiz(2,'O')">O</button>
+        <button class="ox-btn" onclick="checkQuiz(2,'X')">X</button>
+      </div>
+      <div class="quiz-feedback" id="qf-2"></div>
+    </div>
+
+    <div class="quiz-card">
+      <div class="quiz-q"><span class="q-badge">4</span>미시 렌즈에서는 배경 별의 밝기가 일시적으로 증가했다가 감소하는 광도 곡선이 나타난다.</div>
+      <div class="quiz-btns">
+        <button class="ox-btn" onclick="checkQuiz(3,'O')">O</button>
+        <button class="ox-btn" onclick="checkQuiz(3,'X')">X</button>
+      </div>
+      <div class="quiz-feedback" id="qf-3"></div>
+    </div>
+
+    <div class="quiz-card">
+      <div class="quiz-q"><span class="q-badge">5</span>중력렌즈 효과를 이용하면 빛을 방출하지 않는 암흑물질의 분포도 파악할 수 있다.</div>
+      <div class="quiz-btns">
+        <button class="ox-btn" onclick="checkQuiz(4,'O')">O</button>
+        <button class="ox-btn" onclick="checkQuiz(4,'X')">X</button>
+      </div>
+      <div class="quiz-feedback" id="qf-4"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:16px;">🧮 계산 도전 — 태양 근방 빛의 편향각</h3>
+    <div class="key-box">
+      <div class="key-label">편향각 공식 (일반 상대성이론)</div>
+      <p>질량 $M$인 천체로부터 최소 거리 $b$(충격 매개변수)로 지나가는 빛의 편향각:</p>
+      <div style="text-align:center; margin-top:10px;">$$\delta = \frac{4GM}{c^2 b}$$</div>
+    </div>
+    <div class="calc-box">
+      <div class="calc-title">문제: 태양 가장자리를 스치듯 지나가는 빛의 편향각을 구하시오.</div>
+      <div class="calc-step">
+        <span class="step-label">주어진 값</span>
+        $G = 6.674\times10^{-11}$ N·m²/kg²,&nbsp; $M_\odot = 1.989\times10^{30}$ kg<br>
+        $c = 2.998\times10^8$ m/s,&nbsp; $R_\odot = 6.96\times10^8$ m (태양 반지름 = 충격 매개변수 $b$)
+      </div>
+      <div class="calc-step">
+        <span class="step-label">구하는 것</span>
+        편향각 $\delta$ (라디안 및 각초)
+      </div>
+    </div>
+    <button class="answer-toggle" onclick="toggleAnswer(this)">풀이 보기 ↓</button>
+    <div class="answer-box">
+      <strong>풀이 과정</strong><br><br>
+      $\delta = \dfrac{4GM_\odot}{c^2 R_\odot}$<br><br>
+      분자: $4 \times 6.674\times10^{-11} \times 1.989\times10^{30} = 5.309\times10^{20}$<br>
+      분모: $(2.998\times10^8)^2 \times 6.96\times10^8 = 8.988\times10^{16}\times6.96\times10^8 = 6.256\times10^{25}$<br><br>
+      $\delta = \dfrac{5.309\times10^{20}}{6.256\times10^{25}} \approx 8.49\times10^{-6}$ rad<br><br>
+      각초 변환: $8.49\times10^{-6} \times \dfrac{180°}{\pi} \times \dfrac{3600"}{1°} \approx \mathbf{1.75"}$<br><br>
+      → <strong>1919년 에딩턴 관측값(1.75")과 정확히 일치! 일반 상대성이론이 실험으로 검증된 역사적 순간</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:14px;">🗨️ 토론: 보이지 않는 질량을 '본다'는 것</h3>
+    <div class="think-box">
+      <div class="think-label">탐구 질문</div>
+      <p>우주 질량-에너지의 약 27%를 차지하는 암흑물질은 빛과 상호작용하지 않습니다. 그렇다면 중력렌즈를 이용해 암흑물질을 "볼 수 있다"고 말할 수 있을까요? 어떤 의미에서 그렇고, 어떤 한계가 있을까요?</p>
+    </div>
+    <ul class="item-list" style="margin-top:14px;">
+      <li><span class="item-num">힌</span><span>중력렌즈는 질량이 있는 모든 것에 반응합니다</span></li>
+      <li><span class="item-num">힌</span><span>배경 천체의 왜곡 패턴을 역산하면 렌즈의 질량 분포를 추정할 수 있습니다</span></li>
+      <li><span class="item-num">힌</span><span>하지만 암흑물질의 성질(입자 종류, 온도 등)은 중력렌즈로 알 수 없습니다</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== 5. 정리 ===== -->
+<section id="sec-4" class="section">
+  <div class="sec-title">
+    <div class="sec-num">5</div>
+    <h2>정리 및 실제 활용</h2>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:16px;">🃏 핵심 개념 카드 정리</h3>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="sum-icon">🕸️</div>
+        <h4>시공간 곡률</h4>
+        <p>질량이 주변 시공간을 휘게 하며, 빛은 이 휜 경로를 따라 이동</p>
+      </div>
+      <div class="summary-card">
+        <div class="sum-icon">💫</div>
+        <h4>편향각 공식</h4>
+        <p>$\delta = 4GM/c^2b$<br>질량에 비례, 충격 매개변수에 반비례</p>
+      </div>
+      <div class="summary-card">
+        <div class="sum-icon">⭕</div>
+        <h4>아인슈타인 고리</h4>
+        <p>완전 정렬 시 광원이 렌즈 주변에 원형으로 나타남</p>
+      </div>
+      <div class="summary-card">
+        <div class="sum-icon">🔭</div>
+        <h4>강한 렌즈</h4>
+        <p>아인슈타인 고리·아크 형성, 은하단이 렌즈 역할</p>
+      </div>
+      <div class="summary-card">
+        <div class="sum-icon">📊</div>
+        <h4>약한 렌즈</h4>
+        <p>통계적 분석으로 암흑물질 분포 지도 작성</p>
+      </div>
+      <div class="summary-card">
+        <div class="sum-icon">⭐</div>
+        <h4>미시 렌즈</h4>
+        <p>밝기 변화 곡선으로 외계행성·MACHO 탐색</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:16px;">🚀 실제 활용 분야</h3>
+    <ul class="item-list">
+      <li><span class="item-num">1</span><span><strong>자연 망원경:</strong> 은하단이 망원경이 되어 수백억 광년 떨어진 초기 우주 은하를 관측 (제임스 웹 망원경 활용)</span></li>
+      <li><span class="item-num">2</span><span><strong>암흑물질 지도:</strong> 약한 렌즈로 보이지 않는 물질의 3D 분포 파악 — 우주 거대 구조 이해</span></li>
+      <li><span class="item-num">3</span><span><strong>외계행성 탐색:</strong> 한국 KMTNet이 지구~달 질량 외계행성까지 미시 렌즈로 탐색</span></li>
+      <li><span class="item-num">4</span><span><strong>블랙홀 질량 측정:</strong> 고밀도 천체의 미시 렌즈 이벤트로 블랙홀 질량 추정</span></li>
+      <li><span class="item-num">5</span><span><strong>허블 상수 측정:</strong> 시간 지연 중력렌즈(time-delay lensing)로 우주 팽창 속도 독립 측정</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 style="font-weight:800; margin-bottom:14px;">🔗 더 알아보기</h3>
+    <div class="link-box">🌐 <strong>NASA:</strong> <a href="https://www.nasa.gov/universe/gravitational-lensing/" target="_blank">Gravitational Lensing — NASA Science</a></div>
+    <div class="link-box">🌐 <strong>ESA/Hubble:</strong> <a href="https://esahubble.org/science/gravitational_lensing/" target="_blank">Gravitational Lensing — ESA/Hubble</a></div>
+    <div class="link-box">🌐 <strong>KMTNet:</strong> <a href="https://kmtnet.kasi.re.kr/" target="_blank">한국 미시중력렌즈 망원경망 (KASI)</a></div>
+  </div>
+</section>
+</main>
+
+<footer>날아라 물리 통합과학 학습자료 | © 동북고등학교 강현식</footer>
+
+<script>
+/* ===== Stars ===== */
+(function() {
+  const cv = document.getElementById('stars-bg');
+  const ctx = cv.getContext('2d');
+  let stars = [];
+  function resize() {
+    cv.width = window.innerWidth;
+    cv.height = window.innerHeight;
+    stars = Array.from({length: Math.floor(cv.width * cv.height / 3500)}, () => ({
+      x: Math.random() * cv.width,
+      y: Math.random() * cv.height,
+      r: Math.random() * 1.3 + 0.2,
+      a: Math.random() * 0.7 + 0.25,
+      phase: Math.random() * Math.PI * 2,
+      spd: Math.random() * 0.015 + 0.004
+    }));
+  }
+  function draw() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    const t = Date.now() * 0.001;
+    for (const s of stars) {
+      const a = s.a * (0.65 + 0.35 * Math.sin(s.phase + t * s.spd * 8));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize);
+  resize(); draw();
+})();
+
+/* ===== Tab switching ===== */
+function switchTab(idx) {
+  document.querySelectorAll('.section').forEach((s, i) => s.classList.toggle('active', i === idx));
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  if (idx === 1) setTimeout(initSims, 80);
+  if (idx === 2) setTimeout(initLensCards, 80);
+}
+
+/* ===== Grid simulation ===== */
+let gCtx, gW, gH;
+function initGrid() {
+  const cv = document.getElementById('gridCanvas');
+  gW = cv.offsetWidth || 600;
+  cv.width = gW;
+  gH = cv.height;
+  gCtx = cv.getContext('2d');
+  updateGrid();
+}
+function updateGrid() {
+  if (!gCtx) return initGrid();
+  const mass = +document.getElementById('massSlider').value;
+  document.getElementById('massVal').textContent = mass === 0 ? '0 (평평한 시공간)' : `M☉ × ${mass}`;
+  drawGrid(gCtx, gW, gH, mass);
+}
+function drawGrid(ctx, W, H, mass) {
+  ctx.clearRect(0, 0, W, H);
+  const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)/2);
+  bg.addColorStop(0, '#050920'); bg.addColorStop(1, '#020510');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const cx = W/2, cy = H/2, strength = mass * 0.55, step = 35;
+  function warp(x, y) {
+    const dx = x-cx, dy = y-cy, r = Math.sqrt(dx*dx+dy*dy);
+    if (r < 4) return {x: cx, y: cy};
+    const f = strength / (r + strength * 0.28);
+    return {x: x - dx*f*0.5, y: y - dy*f*0.5};
+  }
+  const cols = Math.ceil(W/step)+2, rows = Math.ceil(H/step)+2;
+  const sx = -(step-(W%step))/2, sy = -(step-(H%step))/2;
+  ctx.lineWidth = 1.3;
+  for (let r=0; r<rows; r++) {
+    const y0 = sy+r*step;
+    ctx.beginPath();
+    for (let c=0; c<cols; c++) { const p=warp(sx+c*step,y0); c===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); }
+    ctx.strokeStyle = 'rgba(80,160,255,0.75)'; ctx.stroke();
+  }
+  for (let c=0; c<cols; c++) {
+    const x0 = sx+c*step;
+    ctx.beginPath();
+    for (let r=0; r<rows; r++) { const p=warp(x0,sy+r*step); r===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); }
+    ctx.strokeStyle = 'rgba(80,160,255,0.75)'; ctx.stroke();
+  }
+  const lr = 9 + mass * 0.22;
+  if (mass > 0) {
+    const glow = ctx.createRadialGradient(cx,cy,0,cx,cy,lr*4);
+    glow.addColorStop(0, `rgba(255,200,80,${mass/180})`); glow.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(cx,cy,lr*4,0,Math.PI*2); ctx.fill();
+  }
+  const og = ctx.createRadialGradient(cx-lr*.3,cy-lr*.3,0,cx,cy,lr);
+  if (mass > 65) { og.addColorStop(0,'#1a1a2e'); og.addColorStop(1,'#040410'); }
+  else { og.addColorStop(0,'#fff5cc'); og.addColorStop(0.6,'#ffcc44'); og.addColorStop(1,'#ff6600'); }
+  ctx.fillStyle=og; ctx.beginPath(); ctx.arc(cx,cy,lr,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(148,163,184,0.7)'; ctx.font='11px Malgun Gothic,sans-serif'; ctx.textAlign='center';
+  ctx.fillText(mass>65?'블랙홀급 천체':mass===0?'질량 없음':'질량 천체', cx, cy+lr+18);
+}
+
+/* ===== Lens simulation ===== */
+let lCtx, lW, lH;
+function initLens() {
+  const cv = document.getElementById('lensCanvas');
+  lW = cv.offsetWidth || 600;
+  cv.width = lW;
+  lH = cv.height;
+  lCtx = cv.getContext('2d');
+  updateLens();
+}
+function updateLens() {
+  if (!lCtx) return initLens();
+  const align = +document.getElementById('alignSlider').value;
+  const mass = +document.getElementById('lensMassSlider').value;
+  const aligned = Math.abs(align) < 6;
+  document.getElementById('alignVal').textContent = aligned ? '완벽 정렬 ✦' : (align > 0 ? '아래쪽 어긋남' : '위쪽 어긋남');
+  document.getElementById('lensMassVal').textContent = `M☉ × ${mass}`;
+  drawLens(lCtx, lW, lH, align, mass);
+}
+function drawLens(ctx, W, H, align, mass) {
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#010210'; ctx.fillRect(0,0,W,H);
+  for (let i=0;i<70;i++) {
+    ctx.beginPath(); ctx.arc((i*139)%W,(i*97+40)%H,0.6,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${0.08+(i%5)*0.07})`; ctx.fill();
+  }
+  const cx=W/2, cy=H/2;
+  const srcX=58, srcY=cy+align;
+  const lensX=cx, lensY=cy;
+  const obsX=W-58, obsY=cy;
+  const thetaE = 18 + mass * 0.52;
+  const isAligned = Math.abs(align) < 6;
+
+  // Optical axis (dotted)
+  ctx.setLineDash([4,5]); ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(srcX,cy); ctx.lineTo(obsX,cy); ctx.stroke(); ctx.setLineDash([]);
+
+  if (isAligned) {
+    // --- EINSTEIN RING ---
+    const rg = ctx.createRadialGradient(lensX,lensY,thetaE-7,lensX,lensY,thetaE+7);
+    rg.addColorStop(0,'rgba(251,191,36,0)'); rg.addColorStop(0.5,'rgba(251,191,36,0.95)'); rg.addColorStop(1,'rgba(251,191,36,0)');
+    ctx.save(); ctx.shadowColor='#fbbf24'; ctx.shadowBlur=18;
+    ctx.strokeStyle=rg; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.arc(lensX,lensY,thetaE,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+    // 이차 베지어: 고리 상단·하단을 t=0.5(lensX)에서 통과
+    // cp_y = 2×(통과점y) − 0.5×(srcY + obsY)
+    [1,-1].forEach(dir => {
+      const ry  = lensY + dir * thetaE;
+      const cpy = 2*ry - 0.5*(srcY + obsY);
+      ctx.beginPath(); ctx.moveTo(srcX, srcY);
+      ctx.quadraticCurveTo(lensX, cpy, obsX, obsY);
+      ctx.strokeStyle='rgba(251,191,36,0.8)'; ctx.lineWidth=2; ctx.stroke();
+    });
+    ctx.fillStyle='#fbbf24'; ctx.font='bold 12px Malgun Gothic,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('아인슈타인 고리', lensX, lensY-thetaE-14);
+
+  } else {
+    // --- TWO-IMAGE LENSING ---
+    // 렌즈 방정식: θ± = (β ± √(β²+4)) / 2  (아인슈타인 반경 단위)
+    const betaU    = align / thetaE;
+    const sq       = Math.sqrt(betaU*betaU + 4);
+    const thetaPlus  = (betaU + sq) / 2;   // 주 상: 광원과 같은 쪽
+    const thetaMinus = (betaU - sq) / 2;   // 부 상: 반대쪽, 광축을 가로질러 휘어짐
+
+    // 렌즈 평면 위 통과 좌표 (t=0.5 위치)
+    const i1y = cy + thetaPlus  * thetaE;
+    const i2y = cy + thetaMinus * thetaE;
+
+    // 이차 베지어 제어점: cp_y = 2×통과y − 0.5×(srcY + obsY)
+    // 이 공식으로 베지어가 lensX에서 정확히 θ± 위치를 통과함
+    const cp1y = 2*i1y - 0.5*(srcY + obsY);
+    const cp2y = 2*i2y - 0.5*(srcY + obsY);
+
+    // 아인슈타인 반경 기준원 (점선)
+    ctx.setLineDash([3,5]); ctx.lineWidth=0.9;
+    ctx.strokeStyle='rgba(251,191,36,0.2)';
+    ctx.beginPath(); ctx.arc(lensX,lensY,thetaE,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 관측자 시선 방향 (점선): 베지어 끝점의 접선 반대 방향으로 짧게 표시
+    [[cp1y,'rgba(96,165,250,0.45)'],[cp2y,'rgba(167,139,250,0.45)']].forEach(([cpy,col]) => {
+      const dx = obsX - lensX, dy = obsY - cpy;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      const ux = dx/len*80, uy = dy/len*80;
+      ctx.setLineDash([5,6]); ctx.lineWidth=1.2; ctx.strokeStyle=col;
+      ctx.beginPath(); ctx.moveTo(obsX,obsY); ctx.lineTo(obsX-ux, obsY-uy); ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    // 주 상 경로: 이차 베지어 (광원 쪽으로 부드럽게 휘어짐)
+    ctx.beginPath(); ctx.moveTo(srcX, srcY);
+    ctx.quadraticCurveTo(lensX, cp1y, obsX, obsY);
+    const g1 = ctx.createLinearGradient(srcX,0,obsX,0);
+    g1.addColorStop(0,'rgba(251,191,36,1)'); g1.addColorStop(0.5,'rgba(96,165,250,0.9)'); g1.addColorStop(1,'rgba(96,165,250,1)');
+    ctx.strokeStyle=g1; ctx.lineWidth=2.5; ctx.stroke();
+
+    // 부 상 경로: 이차 베지어 (광축을 넘어 반대쪽으로 휘어져 관측자에 도달)
+    ctx.beginPath(); ctx.moveTo(srcX, srcY);
+    ctx.quadraticCurveTo(lensX, cp2y, obsX, obsY);
+    const g2 = ctx.createLinearGradient(srcX,0,obsX,0);
+    g2.addColorStop(0,'rgba(251,191,36,1)'); g2.addColorStop(0.5,'rgba(167,139,250,0.9)'); g2.addColorStop(1,'rgba(167,139,250,1)');
+    ctx.strokeStyle=g2; ctx.lineWidth=2.5; ctx.stroke();
+
+    // 렌즈 평면 통과 지점 표시 (물리적 상 위치)
+    [[i1y,'#60a5fa','주 상'],[i2y,'#a78bfa','부 상']].forEach(([iy,col,lbl]) => {
+      ctx.save(); ctx.shadowColor=col; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.arc(lensX,iy,4.5,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); ctx.restore();
+      ctx.fillStyle=col; ctx.font='bold 10px Malgun Gothic,sans-serif'; ctx.textAlign='left';
+      ctx.fillText(lbl, lensX+9, iy + (iy > cy ? 15 : -8));
+    });
+  }
+  // Source
+  const sg = ctx.createRadialGradient(srcX,srcY,0,srcX,srcY,9);
+  sg.addColorStop(0,'white'); sg.addColorStop(0.35,'#fbbf24'); sg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.save(); ctx.shadowColor='#fbbf24'; ctx.shadowBlur=12;
+  ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(srcX,srcY,9,0,Math.PI*2); ctx.fill(); ctx.restore();
+  ctx.fillStyle='rgba(148,163,184,0.8)'; ctx.font='11px Malgun Gothic,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('광원',srcX,srcY+(align<0?-14:18));
+  // Lens galaxy
+  const lg = ctx.createRadialGradient(lensX,lensY,0,lensX,lensY,22);
+  lg.addColorStop(0,'rgba(190,170,240,0.9)'); lg.addColorStop(0.5,'rgba(110,80,180,0.55)'); lg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=lg; ctx.beginPath(); ctx.ellipse(lensX,lensY,22,13,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(167,139,250,0.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.ellipse(lensX,lensY,22,13,0,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='rgba(148,163,184,0.8)'; ctx.font='11px Malgun Gothic,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('렌즈',lensX,lensY+30);
+  // Observer
+  ctx.font='20px sans-serif'; ctx.fillText('👁',obsX,obsY+7);
+  ctx.fillStyle='rgba(148,163,184,0.8)'; ctx.font='11px Malgun Gothic,sans-serif';
+  ctx.fillText('관측자',obsX,obsY+22);
+}
+
+function initSims() { initGrid(); initLens(); }
+
+/* ===== Lens type mini canvases ===== */
+function initLensCards() {
+  drawStrongLens(); drawWeakLens(); drawMicroLens();
+}
+function drawStrongLens() {
+  const cv = document.getElementById('c-strong'); if(!cv) return;
+  const ctx = cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.fillStyle='#000212'; ctx.fillRect(0,0,W,H);
+  const cx=W/2, cy=H/2;
+  ctx.save(); ctx.shadowColor='#fbbf24'; ctx.shadowBlur=14;
+  const rg = ctx.createRadialGradient(cx,cy,32,cx,cy,40);
+  rg.addColorStop(0,'rgba(251,191,36,0)'); rg.addColorStop(0.5,'rgba(251,191,36,0.9)'); rg.addColorStop(1,'rgba(251,191,36,0)');
+  ctx.strokeStyle=rg; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(cx,cy,36,0,Math.PI*2); ctx.stroke(); ctx.restore();
+  const lg = ctx.createRadialGradient(cx,cy,0,cx,cy,11);
+  lg.addColorStop(0,'#9080e0'); lg.addColorStop(1,'#3a1870');
+  ctx.fillStyle=lg; ctx.beginPath(); ctx.arc(cx,cy,11,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(251,191,36,0.45)'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(cx,cy,44,0.4,1.25); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,44,3.5,4.4); ctx.stroke();
+  ctx.fillStyle='rgba(148,163,184,0.65)'; ctx.font='9px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('아인슈타인 고리 + 아크',cx,H-5);
+}
+function drawWeakLens() {
+  const cv = document.getElementById('c-weak'); if(!cv) return;
+  const ctx = cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.fillStyle='#000212'; ctx.fillRect(0,0,W,H);
+  const pts = [[W/2-42,H/2-18],[W/2+38,H/2-26],[W/2-16,H/2+28],[W/2+44,H/2+16],[W/2-46,H/2+8]];
+  const angs = [0.35,-0.55,0.8,-0.28,0.65];
+  pts.forEach(([x,y],i) => {
+    ctx.save(); ctx.translate(x,y); ctx.rotate(angs[i]);
+    const g = ctx.createRadialGradient(0,0,0,0,0,13);
+    g.addColorStop(0,'rgba(80,180,255,0.85)'); g.addColorStop(1,'rgba(30,90,200,0)');
+    ctx.fillStyle=g; ctx.scale(1,0.32);
+    ctx.beginPath(); ctx.arc(0,0,13,0,Math.PI*2); ctx.fill(); ctx.restore();
+  });
+  ctx.fillStyle='rgba(148,163,184,0.65)'; ctx.font='9px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('접선 방향으로 늘어난 은하들',W/2,H-5);
+}
+function drawMicroLens() {
+  const cv = document.getElementById('c-micro'); if(!cv) return;
+  const ctx = cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.fillStyle='#000212'; ctx.fillRect(0,0,W,H);
+  const L=16, R=W-14, B=H-22, T=16, cw=R-L, ch=B-T;
+  ctx.strokeStyle='rgba(100,116,139,0.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(L,B); ctx.lineTo(R,B); ctx.moveTo(L,T); ctx.lineTo(L,B); ctx.stroke();
+  ctx.fillStyle='rgba(100,116,139,0.65)'; ctx.font='8px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('시간 →',(L+R)/2,H-2);
+  const peakX = L+cw*0.5;
+  ctx.beginPath();
+  for (let x=L; x<=R; x++) {
+    const t=(x-peakX)/(cw*0.16);
+    const u2=t*t+0.01, u=Math.sqrt(u2);
+    const A=(u2+2)/(u*Math.sqrt(u2+4));
+    const norm=Math.max(0,Math.min(1,(A-1)/9));
+    const y=B-norm*ch*0.82-ch*0.05;
+    x===L?ctx.moveTo(x,Math.min(y,B)):ctx.lineTo(x,Math.max(T+2,Math.min(y,B-2)));
+  }
+  const lg = ctx.createLinearGradient(L,0,R,0);
+  lg.addColorStop(0,'rgba(244,114,182,0.25)'); lg.addColorStop(0.5,'rgba(244,114,182,1)'); lg.addColorStop(1,'rgba(244,114,182,0.25)');
+  ctx.strokeStyle=lg; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='rgba(244,114,182,0.75)'; ctx.font='8px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('최대 밝기',peakX,T+9);
+  ctx.fillStyle='rgba(148,163,184,0.65)'; ctx.fillText('광도 증폭 곡선',(L+R)/2,H-2);
+}
+
+/* ===== Quiz ===== */
+const QA = ['X','O','X','O','O'];
+const QE = [
+  '뉴턴 역학으로도 편향을 예측할 수 있지만, 예측값이 0.87"로 실제 관측값(1.75")의 절반에 불과합니다. 일반 상대성이론만이 올바른 값을 예측합니다.',
+  '정확히 맞습니다! 완전 정렬 시 빛이 사방으로 균등하게 굴절되어 원형의 아인슈타인 고리가 형성됩니다.',
+  '약한 렌즈 효과는 개별 은하 하나로는 매우 미미합니다. 수천~수만 개 은하의 모양을 통계적으로 분석해야만 신호를 검출할 수 있습니다.',
+  '정확합니다! 렌즈 천체가 배경 별 앞을 통과할 때 밝기가 증가했다가 원래대로 돌아오는 대칭적 종 모양(Paczynski 곡선) 광도 변화가 나타납니다.',
+  '맞습니다! 중력렌즈는 질량에만 반응하므로 빛을 내지 않는 암흑물질도 배경 천체의 빛을 왜곡시키며, 이 왜곡 패턴으로 분포를 역추적할 수 있습니다.'
+];
+function checkQuiz(idx, chosen) {
+  const correct = QA[idx];
+  const fb = document.getElementById(`qf-${idx}`);
+  const btns = fb.parentElement.querySelectorAll('.ox-btn');
+  btns.forEach(b => b.classList.remove('correct','wrong'));
+  const chosenIdx = chosen==='O'?0:1, correctIdx = correct==='O'?0:1;
+  if (chosen === correct) {
+    btns[chosenIdx].classList.add('correct');
+    fb.className='quiz-feedback show ok';
+    fb.innerHTML=`✓ 정답! ${QE[idx]}`;
+  } else {
+    btns[chosenIdx].classList.add('wrong');
+    btns[correctIdx].classList.add('correct');
+    fb.className='quiz-feedback show no';
+    fb.innerHTML=`✗ 오답. 정답은 <strong>${correct}</strong>입니다. ${QE[idx]}`;
+  }
+}
+
+/* ===== Answer toggle ===== */
+function toggleAnswer(btn) {
+  const box = btn.nextElementSibling;
+  box.classList.toggle('open');
+  btn.textContent = box.classList.contains('open') ? '풀이 접기 ↑' : '풀이 보기 ↓';
+}
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('sec-1').classList.contains('active')) initSims();
+});
+</script>
+</body>
+</html>
