@@ -6,6 +6,15 @@
 <title>중력과 케플러 법칙</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="(function(){
+    var opts={delimiters:[{left:'$$',right:'$$',display:true},{left:'\\\\(',right:'\\\\)',display:false}],throwOnError:false};
+    ['derivation','law2-proof'].forEach(function(id){
+      var el=document.getElementById(id); if(el) renderMathInElement(el,opts);
+    });
+  })();"></script>
 <style>
 :root {
   --bg: #03050f;
@@ -579,6 +588,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .f-super { font-size: 0.75rem; vertical-align: super; }
 .f-prop { font-size: 2rem; color: var(--muted); }
 
+/* ── KaTeX 다크테마 색상 ── */
+#derivation .katex { color: var(--text); font-size: 1.15em; }
+#derivation .katex-display { color: var(--text); margin: 0.4em 0; }
+#derivation .katex-display > .katex { text-align: left; }
+
 /* Divider */
 .section-divider {
   border: none;
@@ -737,7 +751,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <a href="#kepler-intro">케플러</a>
     <a href="#law1">제1법칙</a>
     <a href="#law2">제2법칙</a>
+    <a href="#law2-proof">제2법칙 증명</a>
     <a href="#law3">제3법칙</a>
+    <a href="#derivation">만유인력 유도</a>
   </div>
 </nav>
 
@@ -957,6 +973,241 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
 <hr class="section-divider">
 
+<!-- ④-b 제2법칙 증명 -->
+<section id="law2-proof" style="min-height:auto;padding-top:90px;padding-bottom:110px;background:radial-gradient(ellipse 50% 60% at 15% 55%,rgba(245,110,110,0.05) 0%,transparent 70%);">
+  <div class="section-label">section 04-b · proof</div>
+  <h2 class="section-title">제2법칙 — <span class="accent">뉴턴의 기하학적 증명</span></h2>
+
+  <p class="section-body" style="margin-bottom:1.5rem;">
+    뉴턴이 <em>프린키피아</em>에서 사용한 방법으로, <strong style="color:var(--gold);">충격력(impulsive force) 모델</strong>을 이용해 면적 속도 일정을 기하학적으로 증명합니다.
+  </p>
+
+  <!-- 핵심 아이디어 -->
+  <div class="card" style="max-width:780px;margin-bottom:2rem;border-color:rgba(245,200,66,0.3);">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--gold);letter-spacing:0.2em;margin-bottom:0.8rem;">🔑 핵심 아이디어</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.85);line-height:2;">
+      중력을 <strong style="color:var(--cyan);">연속적인 힘</strong>이 아니라
+      <strong style="color:var(--rose);">일정 시간마다 작용하는 순간적 충격</strong>으로 근사한 뒤,<br>
+      시간 간격을 무한히 줄이면 실제 궤도가 된다.
+    </div>
+  </div>
+
+  <!-- SVG 다이어그램 -->
+  <div style="background:rgba(7,13,31,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:1.5rem 1.5rem 1rem;max-width:700px;margin-bottom:2rem;">
+    <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.12em;margin-bottom:1rem;">뉴턴의 충격력 모델 — 프린키피아 방법</div>
+    <svg viewBox="0 0 660 500" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+      <defs>
+        <marker id="arrowRed" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+          <polygon points="0 0,7 3.5,0 7" fill="#f56e6e"/>
+        </marker>
+      </defs>
+
+      <!--
+        궤도 좌표 (A→B 각도 ≈ 52°, 등면적 검증됨)
+        S=(55,462)  A=(554,440)  B=(480,345)
+        c=2B-A=(406,250) [관성, A-B-c 일직선]
+        c'=(393,256) [실제, 중력 보정]
+        D=(296,173)  E=(191,99)  F=(82,36)
+      -->
+
+      <!-- 삼각형 면적 -->
+      <polygon points="55,462 554,440 480,345" fill="rgba(100,150,230,0.30)" stroke="rgba(100,150,230,0.5)" stroke-width="0.8"/>
+      <polygon points="55,462 480,345 393,256" fill="rgba(245,200,66,0.25)"  stroke="rgba(245,200,66,0.5)"  stroke-width="0.8"/>
+      <polygon points="55,462 393,256 296,173" fill="rgba(245,110,110,0.25)" stroke="rgba(245,110,110,0.5)" stroke-width="0.8"/>
+      <polygon points="55,462 296,173 191,99"  fill="rgba(56,217,245,0.22)"  stroke="rgba(56,217,245,0.5)"  stroke-width="0.8"/>
+      <polygon points="55,462 191,99  82,36"   fill="rgba(120,210,100,0.22)" stroke="rgba(120,210,100,0.5)" stroke-width="0.8"/>
+
+      <!-- S에서 각 점으로 점선 -->
+      <g stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-dasharray="5,5" fill="none">
+        <line x1="55" y1="462" x2="554" y2="440"/>
+        <line x1="55" y1="462" x2="480" y2="345"/>
+        <line x1="55" y1="462" x2="393" y2="256"/>
+        <line x1="55" y1="462" x2="296" y2="173"/>
+        <line x1="55" y1="462" x2="191" y2="99"/>
+        <line x1="55" y1="462" x2="82"  y2="36"/>
+      </g>
+
+      <!-- 관성 직선 점선: A(554,440)→B(480,345)→c(406,250)→(350,183) 일직선 -->
+      <line x1="554" y1="440" x2="350" y2="183"
+            stroke="rgba(245,110,110,0.85)" stroke-width="1.8" stroke-dasharray="6,5" fill="none"/>
+
+      <!-- 실제 궤도 -->
+      <polyline points="554,440 480,345 393,256 296,173 191,99 82,36"
+                fill="none" stroke="rgba(245,200,66,0.85)" stroke-width="2"/>
+
+      <!-- 중력 충격 화살표: c(406,250) → c'(393,256) -->
+      <line x1="406" y1="250" x2="397" y2="255" stroke="#f56e6e" stroke-width="2.8" marker-end="url(#arrowRed)"/>
+
+      <!-- 실제 위치 점 (r=3.5, 작게) -->
+      <circle cx="554" cy="440" r="3.5" fill="rgba(232,234,246,0.92)"/>
+      <circle cx="480" cy="345" r="3.5" fill="rgba(232,234,246,0.92)"/>
+      <circle cx="393" cy="256" r="4.5" fill="rgba(245,200,66,0.95)" stroke="white" stroke-width="0.8"/>
+      <circle cx="296" cy="173" r="3.5" fill="rgba(232,234,246,0.92)"/>
+      <circle cx="191" cy="99"  r="3.5" fill="rgba(232,234,246,0.92)"/>
+      <circle cx="82"  cy="36"  r="3.5" fill="rgba(232,234,246,0.92)"/>
+      <!-- S (태양) -->
+      <circle cx="55" cy="462" r="6"   fill="#f5c842"/>
+      <circle cx="55" cy="462" r="9"   fill="none" stroke="rgba(245,200,66,0.3)" stroke-width="1.5"/>
+
+      <!-- 관성 위치 c: 정확히 2B-A = (406,250) -->
+      <circle cx="406" cy="250" r="4"   fill="rgba(7,13,31,0.95)" stroke="#f56e6e" stroke-width="2"/>
+
+      <!-- 면적 레이블 -->
+      <text x="358" y="418" fill="rgba(130,170,240,0.75)" font-size="12" font-family="Georgia,serif" font-style="italic">△SAB</text>
+      <text x="304" y="355" fill="rgba(245,200,66,0.75)"  font-size="12" font-family="Georgia,serif" font-style="italic">△SBC</text>
+      <text x="240" y="292" fill="rgba(245,110,110,0.75)" font-size="12" font-family="Georgia,serif" font-style="italic">△SCD</text>
+      <text x="174" y="242" fill="rgba(56,217,245,0.75)"  font-size="12" font-family="Georgia,serif" font-style="italic">△SDE</text>
+      <text x="103" y="196" fill="rgba(120,210,100,0.75)" font-size="12" font-family="Georgia,serif" font-style="italic">△SEF</text>
+
+      <!-- 등면적 수식 -->
+      <text x="118" y="488" fill="rgba(255,255,255,0.45)" font-size="10.5" font-family="Georgia,serif" font-style="italic">△SAB = △SBC = △SCD = △SDE = △SEF</text>
+
+      <!-- 위치 레이블 -->
+      <text x="38"  y="480" fill="#f5c842"             font-size="19" font-family="Georgia,serif" font-style="italic">S</text>
+      <text x="557" y="450" fill="rgba(232,234,246,0.92)" font-size="15" font-family="Georgia,serif" font-style="italic">A</text>
+      <text x="484" y="341" fill="rgba(232,234,246,0.92)" font-size="15" font-family="Georgia,serif" font-style="italic">B</text>
+      <!-- c' (실제 위치, 금색) -->
+      <text x="374" y="252" fill="#f5c842"             font-size="15" font-family="Georgia,serif" font-style="italic">c′</text>
+      <text x="299" y="169" fill="rgba(232,234,246,0.92)" font-size="15" font-family="Georgia,serif" font-style="italic">D</text>
+      <text x="194" y="95"  fill="rgba(232,234,246,0.92)" font-size="15" font-family="Georgia,serif" font-style="italic">E</text>
+      <text x="85"  y="32"  fill="rgba(232,234,246,0.92)" font-size="15" font-family="Georgia,serif" font-style="italic">F</text>
+      <!-- c 레이블 (관성 위치, 빨간) -->
+      <text x="410" y="244" fill="#f56e6e"             font-size="14" font-family="Georgia,serif" font-style="italic">c</text>
+    </svg>
+
+    <!-- 범례 -->
+    <div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-top:0.8rem;font-size:0.78rem;color:var(--muted);">
+      <div style="display:flex;align-items:center;gap:0.4rem;">
+        <div style="width:14px;height:8px;background:rgba(130,170,240,0.28);border:1px solid rgba(130,170,240,0.4);border-radius:2px;"></div>
+        같은 면적 삼각형
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem;">
+        <div style="width:14px;height:2px;background:rgba(245,200,66,0.85);"></div>
+        실제 궤도
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem;">
+        <div style="width:14px;height:2px;background:#f56e6e;"></div>
+        중력 충격 c → c′
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem;">
+        <div style="width:8px;height:8px;border-radius:50%;border:2px solid #f56e6e;background:rgba(7,13,31,0.95);"></div>
+        c: 관성 위치 (힘 없을 때)
+      </div>
+    </div>
+  </div>
+
+  <!-- 그림의 구성 요소 표 -->
+  <div class="data-table-wrap" style="max-width:680px;margin-bottom:2rem;">
+    <div class="chart-title" style="margin-bottom:1rem;">📐 그림의 구성 요소</div>
+    <table>
+      <thead><tr><th>기호</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td style="font-family:var(--mono);color:var(--gold);">S</td><td>태양 (힘의 중심)</td></tr>
+        <tr><td style="font-family:var(--mono);color:rgba(232,234,246,0.9);">A → B → c′ → D → E → F</td><td>행성의 실제 위치 (같은 시간 간격)</td></tr>
+        <tr><td style="font-family:var(--mono);color:#f56e6e;">c</td><td>힘이 없을 때 행성이 있었을 위치 (관성 위치) — c′으로 중력에 의해 편향됨</td></tr>
+        <tr><td style="font-family:var(--mono);color:rgba(130,170,240,0.9);">각 삼각형</td><td>같은 시간 동안 쓸고 지나간 넓이 → 모두 동일</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="card" style="max-width:780px;margin-bottom:1.5rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:0.8rem;">STEP 1 · 힘이 없다면? (관성)</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.6rem;">
+      행성이 A에서 B로 이동했다면, 힘이 없을 경우 같은 시간 후 <em>c</em>에 도달합니다 (등속직선운동):
+    </div>
+    <div style="padding:0.2rem 0.5rem 0.8rem;">
+      $$ \overrightarrow{AB} = \overrightarrow{Bc} $$
+    </div>
+    <div style="font-size:0.88rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.6rem;">△SAB와 △SBc의 넓이를 비교하면:</div>
+    <ul style="font-size:0.88rem;color:var(--muted);line-height:2;padding-left:1.5rem;margin-bottom:0.8rem;">
+      <li>밑변: \(AB = Bc\) &nbsp;(같은 시간, 같은 속도)</li>
+      <li>높이: S에서 직선 ABc까지의 수직 거리 → 동일</li>
+    </ul>
+    <div style="padding:0.5rem 1rem;background:rgba(56,217,245,0.05);border-radius:8px;border-left:3px solid rgba(56,217,245,0.4);">
+      $$ \therefore\; \triangle SAB = \triangle SBc \qquad \cdots\;① $$
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card" style="max-width:780px;margin-bottom:1.5rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:0.8rem;">STEP 2 · 태양의 중력이 작용하면?</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.6rem;">
+      B에서 태양 방향(S 방향)으로 순간적인 충격이 가해져, 행성은 <em>c</em> 대신 C로 이동합니다:
+    </div>
+    <div style="padding:0.2rem 0.5rem 0.8rem;">
+      $$ \overrightarrow{cC} \parallel \overrightarrow{BS} \quad \text{(힘의 방향 = 태양 방향)} $$
+    </div>
+    <div style="font-size:0.88rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.6rem;">△SBc와 △SBC의 넓이를 비교하면:</div>
+    <ul style="font-size:0.88rem;color:var(--muted);line-height:2;padding-left:1.5rem;margin-bottom:0.8rem;">
+      <li>두 삼각형은 밑변 SB를 공유</li>
+      <li><em>c</em>와 C는 SB에 평행한 같은 직선 위에 있음 &nbsp;(\(cC \parallel SB\))</li>
+      <li>따라서 SB로부터의 높이가 동일</li>
+    </ul>
+    <div style="padding:0.5rem 1rem;background:rgba(245,200,66,0.05);border-radius:8px;border-left:3px solid rgba(245,200,66,0.4);">
+      $$ \therefore\; \triangle SBc = \triangle SBC \qquad \cdots\;② $$
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card" style="max-width:780px;margin-bottom:1.5rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:0.8rem;">STEP 3 · 결론</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.5rem;">①과 ②를 연결하면:</div>
+    <div style="padding:0.2rem 0.5rem 0.8rem;">
+      $$ \triangle SAB = \triangle SBc = \triangle SBC $$
+    </div>
+    <div style="font-size:0.88rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.5rem;">
+      같은 논리를 C→D, D→E, E→F에도 반복 적용하면:
+    </div>
+    <div style="padding:0.5rem 1rem;background:rgba(245,110,110,0.05);border-radius:8px;border-left:3px solid rgba(245,110,110,0.4);">
+      $$ \triangle SAB = \triangle SBC = \triangle SCD = \triangle SDE = \triangle SEF = \cdots $$
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="card" style="max-width:780px;margin-bottom:2rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:0.8rem;">STEP 4 · 연속으로 확장</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.8rem;">
+      시간 간격을 무한히 작게 줄이면 꺾인 다각형 궤도 → 실제 곡선 궤도가 되고, 위의 관계는 그대로 성립합니다.
+    </div>
+    <div style="padding:1rem 1.5rem;background:linear-gradient(135deg,rgba(245,200,66,0.1),rgba(56,217,245,0.05));border:2px solid rgba(245,200,66,0.4);border-radius:14px;text-align:center;">
+      $$ \text{같은 시간 동안 쓸고 지나간 넓이는 항상 같다} $$
+    </div>
+  </div>
+
+  <!-- 논리 구조 -->
+  <div style="max-width:560px;">
+    <div style="font-family:var(--mono);font-size:0.75rem;color:var(--gold);letter-spacing:0.15em;margin-bottom:1rem;">🗺️ 전체 논리 구조</div>
+    <div style="display:flex;flex-direction:column;gap:0;">
+
+      <div style="background:rgba(56,217,245,0.08);border:1px solid rgba(56,217,245,0.25);border-radius:10px;padding:0.7rem 1.1rem;text-align:center;">
+        <div style="font-size:0.85rem;color:var(--cyan);">관성 (힘 없음)</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">△SAB = △SBc &nbsp;— 등속직선운동</div>
+      </div>
+      <div style="text-align:center;font-size:1.1rem;color:var(--muted);line-height:1.4;">↓</div>
+
+      <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.25);border-radius:10px;padding:0.7rem 1.1rem;text-align:center;">
+        <div style="font-size:0.85rem;color:var(--gold);">태양 방향 힘 작용</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">△SBc = △SBC &nbsp;— \(cC \parallel SB\), 평행선의 넓이</div>
+      </div>
+      <div style="text-align:center;font-size:1.1rem;color:var(--muted);line-height:1.4;">↓</div>
+
+      <div style="background:rgba(245,110,110,0.08);border:1px solid rgba(245,110,110,0.25);border-radius:10px;padding:0.7rem 1.1rem;text-align:center;">
+        <div style="font-size:0.85rem;color:var(--rose);">반복 적용</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">모든 삼각형 넓이 동일</div>
+      </div>
+      <div style="text-align:center;font-size:1.1rem;color:var(--muted);line-height:1.4;">↓</div>
+
+      <div style="background:rgba(100,210,100,0.08);border:2px solid rgba(100,210,100,0.35);border-radius:10px;padding:0.7rem 1.1rem;text-align:center;">
+        <div style="font-size:0.85rem;color:rgb(120,220,100);">시간 간격 → 0</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">케플러 제2법칙 성립 ✓</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
 <!-- ⑤ 제3법칙 -->
 <section id="law3">
   <div class="section-label">section 05 · third law</div>
@@ -1025,6 +1276,107 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       이 상수 k는 중심 천체(태양)의 질량에만 의존하며, <strong style="color:var(--text)">G·M = 4π²/k</strong> 관계로 뉴턴의 만유인력 법칙과 연결됩니다.
     </div>
   </div>
+</section>
+
+<!-- ── 만유인력 유도 섹션 ── -->
+<section id="derivation" style="background: radial-gradient(ellipse 60% 60% at 30% 50%, rgba(245,200,66,0.05) 0%, transparent 70%), radial-gradient(ellipse 40% 40% at 70% 30%, rgba(56,217,245,0.04) 0%, transparent 60%); min-height: auto; padding-bottom: 120px;">
+  <div class="section-label">section 06 · derivation</div>
+  <h2 class="section-title">케플러 제3법칙 →<br><span class="accent">만유인력</span> 유도</h2>
+
+  <!-- 전제 조건 -->
+  <div class="card" style="max-width:780px;margin-bottom:2rem;border-color:rgba(245,200,66,0.25);">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--gold);letter-spacing:0.2em;margin-bottom:0.8rem;">📌 전제 조건 — 단순화 가정</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.85);line-height:1.9;">
+      행성의 궤도를 <strong style="color:var(--cyan)">원궤도로 가정</strong>합니다.<br>
+      <span style="color:var(--muted);font-size:0.85rem;">(실제는 타원이지만, 원으로 근사해도 유도 결과는 동일)</span>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="card" style="max-width:780px;margin-bottom:1.5rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:0.8rem;">STEP 1 · 케플러 제3법칙 확인</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:1.2rem;">
+      케플러 제3법칙의 비례 관계를 등식으로 씁니다:
+    </div>
+    <div style="padding:0.6rem 0 1.2rem 0.5rem;">
+      $$ T^{2} = k \cdot r^{3} \qquad \cdots (1) $$
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.6rem;margin-top:0.2rem;">
+      <div style="background:rgba(56,217,245,0.06);border:1px solid rgba(56,217,245,0.15);border-radius:8px;padding:0.5rem 0.8rem;font-size:0.84rem;color:var(--muted);">
+        \(T\) — 공전 주기
+      </div>
+      <div style="background:rgba(56,217,245,0.06);border:1px solid rgba(56,217,245,0.15);border-radius:8px;padding:0.5rem 0.8rem;font-size:0.84rem;color:var(--muted);">
+        \(r\) — 태양~행성 거리 (원궤도 반지름)
+      </div>
+      <div style="background:rgba(56,217,245,0.06);border:1px solid rgba(56,217,245,0.15);border-radius:8px;padding:0.5rem 0.8rem;font-size:0.84rem;color:var(--muted);">
+        \(k\) — 비례상수 (태양계 내 모든 행성 동일)
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card" style="max-width:780px;margin-bottom:1.5rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:0.8rem;">STEP 2 · 등속 원운동 조건 적용</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.8rem;">
+      행성이 반지름 \(r\)인 원궤도를 주기 \(T\)로 돌 때, 속력 \(v\)와 구심가속도 \(a\)는:
+    </div>
+    <div style="padding:0.4rem 0.5rem;">
+      $$ v = \frac{2\pi r}{T} \qquad \text{(원둘레 ÷ 주기)} $$
+    </div>
+    <div style="font-size:0.88rem;color:var(--muted);padding:0 0.5rem 0.6rem;">이를 구심가속도 \(a = v^2/r\)에 대입하면:</div>
+    <div style="padding:0.4rem 0.5rem 0.6rem;background:rgba(56,217,245,0.05);border-radius:10px;border:1px solid rgba(56,217,245,0.18);">
+      $$ a = \frac{v^{2}}{r} = \frac{1}{r}\left(\frac{2\pi r}{T}\right)^{2} = \frac{4\pi^{2} r}{T^{2}} \qquad \cdots (2) $$
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card" style="max-width:780px;margin-bottom:1.5rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:0.8rem;">STEP 3 · 케플러 제3법칙 대입</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.8rem;">
+      식 (1)에서 \(T^2 = kr^3\)이므로, 이를 식 (2)에 대입합니다:
+    </div>
+    <div style="padding:0.4rem 0.5rem 0.8rem;">
+      $$ a = \frac{4\pi^{2} r}{k r^{3}} = \frac{4\pi^{2}}{k} \cdot \frac{1}{r^{2}} \qquad \cdots (3) $$
+    </div>
+    <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.3);border-radius:10px;padding:0.8rem 1.2rem;font-size:0.9rem;color:rgba(232,234,246,0.9);line-height:1.7;">
+      🔑 <strong style="color:var(--gold);">핵심 발견</strong> — 구심가속도 \(a\)가 거리 \(r\)의
+      <strong style="color:var(--rose);">제곱에 반비례</strong>합니다! &ensp; \(\displaystyle a \propto \frac{1}{r^2}\)
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="card" style="max-width:780px;margin-bottom:1.5rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:0.8rem;">STEP 4 · 힘으로 변환 (뉴턴 제2법칙)</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.8rem;">
+      행성의 질량을 \(m\)이라 하면, \(F = ma\) 이므로:
+    </div>
+    <div style="padding:0.4rem 0.5rem 0.6rem;background:rgba(56,217,245,0.05);border-radius:10px;border:1px solid rgba(56,217,245,0.18);">
+      $$ F = m \cdot \frac{4\pi^{2}}{k} \cdot \frac{1}{r^{2}} \qquad \cdots (4) $$
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="card" style="max-width:780px;margin-bottom:2rem;">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--cyan);letter-spacing:0.2em;margin-bottom:0.8rem;">STEP 5 · 비례상수 k 의 정체 밝히기</div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:1rem;">
+      뉴턴은 중요한 아이디어를 추가합니다:<br>
+      <span style="color:var(--gold);font-style:italic;">"이 힘은 태양의 질량 \(M\)에도 비례할 것이다."</span><br>
+      <span style="color:var(--muted);font-size:0.85rem;">(작용·반작용 대칭성, 목성·토성 위성계에도 같은 법칙이 성립한다는 관찰로부터)</span>
+    </div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.5rem;">
+      따라서 비례상수 \(k\)를 다음과 같이 쓸 수 있습니다:
+    </div>
+    <div style="padding:0.4rem 0.5rem 1rem;">
+      $$ \frac{4\pi^{2}}{k} = GM \quad \Rightarrow \quad k = \frac{4\pi^{2}}{GM} $$
+    </div>
+    <div style="font-size:0.92rem;color:rgba(232,234,246,0.8);line-height:1.9;margin-bottom:0.6rem;">이를 식 (4)에 대입하면 드디어 만유인력 법칙이 도출됩니다:</div>
+
+    <!-- 최종 결과 -->
+    <div style="padding:1.2rem 1.5rem;background:linear-gradient(135deg,rgba(245,200,66,0.1),rgba(56,217,245,0.05));border:2px solid rgba(245,200,66,0.45);border-radius:14px;text-align:center;">
+      $$ F = G\dfrac{Mm}{r^{2}} $$
+    </div>
+  </div>
+
 </section>
 
 <script>
