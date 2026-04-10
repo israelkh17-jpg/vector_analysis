@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flying Physics: 우주 궤도 역학</title>
+    <style>
+        /* 기본 스타일: 어두운 우주 테마 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0a0a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(to right, #1f1f3a, #0a0a1a);
+            padding: 30px;
+            text-align: center;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* 콘텐츠 섹션 스타일 */
+        main {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        section {
+            background-color: #1f1f3a;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid #333;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            color: white;
+            border-left: 5px solid #4a90e2;
+            padding-left: 15px;
+            margin-top: 0;
+        }
+
+        p {
+            margin-bottom: 20px;
+        }
+
+        /* 1. 다이어그램 이미지 스타일 */
+        .diagram-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .diagram-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid #444;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+        }
+
+        /* 2. 시뮬레이션 캔버스 스타일 */
+        canvas {
+            border: 2px solid #333;
+            background: #050505;
+            display: block;
+            margin: 20px auto;
+            border-radius: 8px;
+            width: 100%; /* 반응형 */
+            max-width: 800px;
+            height: auto;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px;
+        }
+
+        button {
+            padding: 10px 25px;
+            font-size: 1.1em;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #357abd;
+        }
+
+        /* 3. 요약 표 스타일 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #0d0d1a;
+        }
+
+        th, td {
+            border: 1px solid #333;
+            padding: 15px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #1f1f3a;
+            color: white;
+        }
+
+        td {
+            color: #c0c0d0;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Flying Physics: 우주의 곡예사, 스윙바이</h1>
+</header>
+
+<main>
+
+    <section id="original-diagram">
+        <h2>1. ISEE-3/ICE 미션의 전설적인 궤도</h2>
+        <div class="diagram-container">
+            <img src="image_0.png" alt="ICE 탐사선 궤도 다이어그램">
+        </div>
+        <p>이 그림은 우주 항해 역사에서 가장 정교한 '중력 도움' 기법을 보여주는 전설적인 다이어그램입니다. 연료가 거의 바닥난 탐사선이 달의 중력만을 이용해 수차례 궤도를 꼬아가며, 결국 인류 최초로 혜성을 직접 탐사하는 데 성공했습니다. 복잡한 고리들은 연료 대신 지혜를 사용한 결과입니다.</p>
+    </section>
+
+    <section id="simulation">
+        <h2>2. 대화형 스윙바이(Gravity Assist) 물리 실험실</h2>
+        <p>위 다이어그램의 복잡한 궤도를 가능하게 만든 핵심 물리학 원리인 '스윙바이'를 실험해 보세요. 행성(또는 달)이 공전하는 방향 뒤쪽으로 우주선이 회전하며, 엔진 없이도 어떻게 가속되는지 눈으로 확인해 보세요.</p>
+        <div class="controls">
+            <button onclick="resetSim()">다시 시작</button>
+        </div>
+        <canvas id="simCanvas" width="800" height="400"></canvas>
+        <p>※ 붉은색 점이 우주선이며, 왼쪽 상단의 수치가 실시간 속력을 나타냅니다.</p>
+    </section>
+
+    <section id="lesson-summary">
+        <h2>3. 수업 내용 요약: 중력, 구심력, 그리고 에너지 훔치기</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>핵심 물리학 개념</th>
+                    <th>스윙바이에서의 역할</th>
+                    <th>다이어그램/시뮬레이션 적용</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>**중력 (만유인력)**</td>
+                    <td>행성(달)이 우주선을 끌어당기는 힘의 원천. 우주 항해의 '보이지 않는 밧줄'.</td>
+                    <td>시뮬레이션에서 붉은 우주선이 푸른 행성에 가까워질수록 휘어지는 힘.</td>
+                </tr>
+                <tr>
+                    <td>**구심력**</td>
+                    <td>중력이 구심력 역할을 하여 우주선을 곡선 궤도로 돌게 만듦.</td>
+                    <td>다이어그램의 복잡한 루프 및 시뮬레이션의 회전 구간.</td>
+                </tr>
+                <tr>
+                    <td>**에너지 보존 & 스윙바이**</td>
+                    <td>*행성 기준*: 속력 변화 없음. *태양(지구) 기준*: 움직이는 행성의 운동량을 훔쳐와 전체 에너지 증가.</td>
+                    <td>시뮬레이션에서 행성 뒤로 돌아 나온 우주선의 최종 속력이 빨라짐 (훔친 에너지).</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+</main>
+
+<script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let planet, craft;
+    const G = 500; // 시뮬레이션을 위한 임의의 중력 상수
+
+    function resetSim() {
+        // 행성 설정 (공전 중인 달/행성 가정)
+        planet = { x: 600, y: 200, vx: -1.5, vy: 0, mass: 1500, radius: 20 };
+        // 우주선 설정 (각도 및 속도 조정)
+        craft = { x: 750, y: 350, vx: -2.5, vy: -1.2, history: [] };
+    }
+
+    function update() {
+        // 1. 중력 계산 (F = G * M * m / r^2)
+        let dx = planet.x - craft.x;
+        let dy = planet.y - craft.y;
+        let distSq = dx*dx + dy*dy;
+        let dist = Math.sqrt(distSq);
+
+        if (dist > planet.radius) {
+            let force = (G * planet.mass) / distSq;
+            let ax = force * (dx / dist); // x축 단위 벡터 적용
+            let ay = force * (dy / dist); // y축 단위 벡터 적용
+
+            // 2. 우주선 속도 및 위치 업데이트 (가속도 적용)
+            craft.vx += ax;
+            craft.vy += ay;
+            craft.x += craft.vx;
+            craft.y += craft.vy;
+
+            // 3. 행성도 이동 (공전)
+            planet.x += planet.vx;
+            planet.y += planet.vy;
+
+            craft.history.push({x: craft.x, y: craft.y});
+        }
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 궤적 그리기
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        craft.history.forEach((pos, i) => {
+            if (i === 0) ctx.moveTo(pos.x, pos.y);
+            else ctx.lineTo(pos.x, pos.y);
+        });
+        ctx.stroke();
+
+        // 행성 그리기
+        ctx.fillStyle = '#4a90e2';
+        ctx.beginPath();
+        ctx.arc(planet.x, planet.y, planet.radius, 0, Math.PI*2);
+        ctx.fill();
+
+        // 우주선 그리기
+        ctx.fillStyle = '#ff4444';
+        ctx.beginPath();
+        ctx.arc(craft.x, craft.y, 4, 0, Math.PI*2);
+        ctx.fill();
+
+        // 속도 텍스트 (시각적 피드백)
+        let speed = Math.sqrt(craft.vx**2 + craft.vy**2).toFixed(2);
+        ctx.fillStyle = "white";
+        ctx.font = "16px sans-serif";
+        ctx.fillText(`우주선 현재 속력: ${speed}`, 20, 30);
+    }
+
+    // 초기화 및 실행
+    resetSim();
+    update();
+</script>
+
+</body>
+</html>
