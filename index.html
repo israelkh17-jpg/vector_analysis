@@ -265,6 +265,35 @@
                         </div>
                     </a>
 
+                    {/* 중력장 벡터 시뮬레이션 */}
+                    <a href="gravity_field.html" className="no-underline">
+                        <div className="glass-morphism p-8 rounded-3xl group cursor-pointer hover:border-teal-400/50 transition-all duration-300 hover:scale-105 h-full">
+                            <div className="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-teal-500/20 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                    <circle cx="16" cy="16" r="4" fill="#2dd4bf" opacity="0.9"/>
+                                    <line x1="8" y1="8" x2="13" y2="13" stroke="#5eead4" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <line x1="24" y1="8" x2="19" y2="13" stroke="#5eead4" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <line x1="8" y1="24" x2="13" y2="19" stroke="#5eead4" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <line x1="24" y1="24" x2="19" y2="19" stroke="#5eead4" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <line x1="16" y1="4" x2="16" y2="12" stroke="#5eead4" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <line x1="16" y1="28" x2="16" y2="20" stroke="#5eead4" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <line x1="4" y1="16" x2="12" y2="16" stroke="#5eead4" strokeWidth="1.5" strokeLinecap="round"/>
+                                    <line x1="28" y1="16" x2="20" y2="16" stroke="#5eead4" strokeWidth="1.5" strokeLinecap="round"/>
+                                </svg>
+                            </div>
+                            <h3 className="text-2xl font-bold mb-3 group-hover:text-teal-400 transition-colors">중력장 벡터 시뮬레이션</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                마우스로 질량체를 움직이며 뉴턴 중력 법칙(g = GM/r²)에 따른 벡터장의 변화를 실시간으로 관찰하세요.
+                            </p>
+                            <p className="text-slate-500 text-xs leading-relaxed mt-2">
+                                실시간 벡터장 · 거리별 강도 시각화 · 캔버스 시뮬레이션
+                            </p>
+                            <div className="mt-6 flex items-center text-teal-400 font-semibold text-sm">
+                                실험 시작하기 <span className="ml-2 group-hover:translate-x-2 transition-transform inline-block">→</span>
+                            </div>
+                        </div>
+                    </a>
+
                     {/* 스윙바이 (우주 궤도 역학) */}
                     <a href="swingby.html" className="no-underline">
                         <div className="glass-morphism p-8 rounded-3xl group cursor-pointer hover:border-cyan-400/50 transition-all duration-300 hover:scale-105 h-full">

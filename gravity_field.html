@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>중력장 벡터 시뮬레이션</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            overflow: hidden;
+            background-color: #050510;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        canvas { display: block; position: absolute; top: 0; left: 0; }
+
+        /* === 왼쪽 패널 === */
+        .panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(10, 15, 30, 0.88);
+            backdrop-filter: blur(12px);
+            padding: 18px 22px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            max-width: 310px;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .panel h1 { font-size: 20px; margin-bottom: 6px; color: #a5f3fc; }
+        .panel p  { font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 4px; }
+
+        .mode-toggle {
+            display: flex;
+            gap: 5px;
+            margin-top: 12px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 8px 4px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.03);
+            color: #94a3b8;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .mode-btn:hover { background: rgba(255,255,255,0.08); }
+        .mode-btn.active {
+            border-color: #38bdf8;
+            background: rgba(56,189,248,0.15);
+            color: #e0f2fe;
+        }
+
+        .speed-control {
+            margin-top: 10px;
+            display: none;
+        }
+        .speed-control label { font-size: 12px; color: #64748b; }
+        .speed-control input[type=range] {
+            width: 100%;
+            margin-top: 4px;
+            accent-color: #38bdf8;
+        }
+
+        .mode-hint {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(56,189,248,0.08);
+            border: 1px solid rgba(56,189,248,0.2);
+        }
+        .mode-hint p {
+            color: #7dd3fc;
+            font-size: 12px;
+            margin: 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 왼쪽 안내 패널 -->
+<div class="panel" id="mainPanel">
+    <h1>Gravity Vector Field</h1>
+    <p id="descText">모드를 선택하여 중력장을 시뮬레이션합니다.</p>
+    <p id="descSub">중력우물 또는 벡터장 모드를 체험하세요.</p>
+
+    <div class="mode-toggle">
+        <button class="mode-btn active" id="btnWell" onclick="setMode('well')">중력우물</button>
+        <button class="mode-btn" id="btnSolar" onclick="setMode('solar')">벡터장</button>
+    </div>
+
+    <div class="speed-control" id="speedControl">
+        <label>시뮬레이션 속도: <span id="speedLabel">1.0</span>x</label>
+        <input type="range" min="0.1" max="3" step="0.1" value="1" id="speedSlider"
+               oninput="simSpeed=parseFloat(this.value); document.getElementById('speedLabel').textContent=this.value;">
+    </div>
+
+    <div class="mode-hint" id="wellHint">
+        <p>마우스를 움직여 공간을 왜곡시키세요.<br>
+           격자의 굴곡이 중력 포텐셜을 나타냅니다.<br>
+           입자들이 우물 속으로 끌려갑니다.</p>
+    </div>
+
+    <div class="mode-hint" id="solarHint">
+        <p>마우스를 움직여 물체를 이동시키세요.<br>
+           움직일 때마다 파동이 사방으로 전파됩니다.<br>
+           속도 슬라이더로 파동 전파 속도를 조절합니다.</p>
+    </div>
+
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    const spacing = 32;
+
+    // ── 모드 & 속도 ──
+    let mode = 'well';
+    let simSpeed = 1.0;
+
+    function setMode(m) {
+        mode = m;
+        document.getElementById('btnWell').classList.toggle('active', m === 'well');
+        document.getElementById('btnSolar').classList.toggle('active', m === 'solar');
+
+        document.getElementById('speedControl').style.display = (m === 'solar') ? 'block' : 'none';
+        document.getElementById('wellHint').style.display = m === 'well' ? 'block' : 'none';
+        document.getElementById('solarHint').style.display = m === 'solar' ? 'block' : 'none';
+
+        if (m === 'well') {
+            wellInit();
+        }
+        if (m === 'solar') {
+            waveInit();
+        }
+    }
+
+    // 별 배경
+    let stars = [];
+    function generateStars() {
+        stars = [];
+        for (let i = 0; i < 250; i++) {
+            stars.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                r: Math.random() * 1.2 + 0.3,
+                a: Math.random() * 0.5 + 0.15
+            });
+        }
+    }
+    function drawStars() {
+        for (const s of stars) {
+            ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // 리사이즈
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+        generateStars();
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // 마우스 이벤트
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        if (mode === 'well') {
+            wellMouse.x = mx;
+            wellMouse.y = my;
+        }
+        if (mode === 'solar') {
+            waveSource.x = mx;
+            waveSource.y = my;
+        }
+    });
+
+    // 벡터 화살표
+    function drawVector(x, y, dx, dy, mag, maxMag) {
+        const t = Math.min(mag / maxMag, 1);
+        const r = Math.floor(140 + t * 115);
+        const g = Math.floor(220 + t * 35);
+        const b = 255;
+
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.55 + t * 0.45})`;
+        ctx.lineWidth = 1.0 + t * 1.8;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + dx, y + dy);
+
+        const angle = Math.atan2(dy, dx);
+        const headLen = Math.max(mag * 0.35, 3);
+        ctx.lineTo(x + dx - headLen * Math.cos(angle - 0.45),
+                   y + dy - headLen * Math.sin(angle - 0.45));
+        ctx.moveTo(x + dx, y + dy);
+        ctx.lineTo(x + dx - headLen * Math.cos(angle + 0.45),
+                   y + dy - headLen * Math.sin(angle + 0.45));
+        ctx.stroke();
+
+        if (t > 0.6) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${t * 0.4})`;
+            ctx.beginPath();
+            ctx.arc(x + dx, y + dy, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // ══════════════════════════════════════
+    //  중력우물 모드
+    // ══════════════════════════════════════
+
+    const wellMouse = { x: -1000, y: -1000 };
+    const wellGridSpacing = 40;
+    const wellDepth = 150;
+    const wellRange = 250;
+    let wellParticles = [];
+
+    class WellBall {
+        constructor() { this.reset(); }
+        reset() {
+            this.x = Math.random() * width;
+            this.y = Math.random() * height;
+            this.vx = (Math.random() - 0.5) * 2;
+            this.vy = (Math.random() - 0.5) * 2;
+            this.color = `hsl(${180 + Math.random() * 40}, 100%, 70%)`;
+        }
+        update() {
+            const dx = wellMouse.x - this.x;
+            const dy = wellMouse.y - this.y;
+            const distSq = dx * dx + dy * dy;
+            const dist = Math.sqrt(distSq);
+            if (dist < wellRange * 1.5) {
+                const force = (wellDepth * 2000) / (distSq + 1000) ** 1.5;
+                this.vx += (dx / dist) * force;
+                this.vy += (dy / dist) * force;
+            }
+            this.vx *= 0.98;
+            this.vy *= 0.98;
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) this.reset();
+        }
+        draw() {
+            const offset = wellGetDeformation(this.x, this.y);
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y + offset, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function wellGetDeformation(x, y) {
+        const dx = x - wellMouse.x;
+        const dy = y - wellMouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return Math.exp(-dist / wellRange) * wellDepth;
+    }
+
+    function wellDrawGrid() {
+        ctx.strokeStyle = '#088';
+        ctx.lineWidth = 1.2;
+        // 세로선
+        for (let x = 0; x <= width; x += wellGridSpacing) {
+            ctx.beginPath();
+            for (let y = 0; y <= height; y += 10) {
+                const z = wellGetDeformation(x, y);
+                if (y === 0) ctx.moveTo(x, y + z);
+                else ctx.lineTo(x, y + z);
+            }
+            ctx.stroke();
+        }
+        // 가로선
+        for (let y = 0; y <= height; y += wellGridSpacing) {
+            ctx.beginPath();
+            for (let x = 0; x <= width; x += 10) {
+                const z = wellGetDeformation(x, y);
+                if (x === 0) ctx.moveTo(x, y + z);
+                else ctx.lineTo(x, y + z);
+            }
+            ctx.stroke();
+        }
+    }
+
+    function wellDrawCenter() {
+        const grad = ctx.createRadialGradient(
+            wellMouse.x, wellMouse.y + wellDepth, 0,
+            wellMouse.x, wellMouse.y + wellDepth, 50
+        );
+        grad.addColorStop(0, '#0cf');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(wellMouse.x, wellMouse.y + wellDepth, 50, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function wellInit() {
+        wellParticles = [];
+        for (let i = 0; i < 20; i++) wellParticles.push(new WellBall());
+    }
+
+    // ══════════════════════════════════════
+    //  벡터장 모드 (파동 전파)
+    // ══════════════════════════════════════
+
+    const waveSource = { x: -1000, y: -1000, prevX: -1000, prevY: -1000 };
+    let waves = [];         // { x, y, time } — 파동 발생 지점
+    let waveTime = 0;
+    const waveSpeed = 200;  // px/sec 전파 속도
+    const waveLifespan = 3; // 초 후 소멸
+    let waveEmitTimer = 0;
+
+    function waveInit() {
+        waves = [];
+        waveTime = 0;
+        waveEmitTimer = 0;
+        waveSource.x = width / 2;
+        waveSource.y = height / 2;
+        waveSource.prevX = waveSource.x;
+        waveSource.prevY = waveSource.y;
+    }
+
+    function waveEmit() {
+        // 물체가 움직일 때만 파동 발생
+        const dx = waveSource.x - waveSource.prevX;
+        const dy = waveSource.y - waveSource.prevY;
+        const speed = Math.sqrt(dx * dx + dy * dy);
+        if (speed > 2) {
+            waveEmitTimer += speed;
+            if (waveEmitTimer > 20) {
+                waves.push({ x: waveSource.x, y: waveSource.y, birth: waveTime, strength: Math.min(speed / 5, 3) });
+                waveEmitTimer = 0;
+            }
+        }
+        waveSource.prevX = waveSource.x;
+        waveSource.prevY = waveSource.y;
+
+        // 오래된 파동 제거
+        waves = waves.filter(w => (waveTime - w.birth) < waveLifespan);
+    }
+
+    function waveDrawRipples() {
+        for (const w of waves) {
+            const age = waveTime - w.birth;
+            const radius = age * waveSpeed * simSpeed;
+            const alpha = Math.max(0, 0.35 * (1 - age / waveLifespan)) * w.strength;
+            if (alpha <= 0) continue;
+
+            ctx.beginPath();
+            ctx.arc(w.x, w.y, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(100, 200, 255, ${alpha * 0.5})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+    }
+
+    function waveDrawVectorField() {
+        if (waves.length === 0) return;
+        const maxLength = spacing * 0.85;
+
+        for (let x = spacing / 2; x < width; x += spacing) {
+            for (let y = spacing / 2; y < height; y += spacing) {
+                let totalDx = 0, totalDy = 0;
+
+                for (const w of waves) {
+                    const age = waveTime - w.birth;
+                    const waveRadius = age * waveSpeed * simSpeed;
+                    const diffX = x - w.x, diffY = y - w.y;
+                    const dist = Math.sqrt(diffX * diffX + diffY * diffY);
+                    if (dist < 5) continue;
+
+                    // 파동 전선 근처에서만 힘이 작용 (가우시안 프로파일)
+                    const delta = dist - waveRadius;
+                    const width_param = 40;
+                    const envelope = Math.exp(-(delta * delta) / (2 * width_param * width_param));
+                    const fade = Math.max(0, 1 - age / waveLifespan);
+                    const magnitude = envelope * fade * w.strength * 12;
+
+                    if (magnitude < 0.05) continue;
+
+                    // 바깥 방향 벡터
+                    totalDx += (diffX / dist) * magnitude;
+                    totalDy += (diffY / dist) * magnitude;
+                }
+
+                const totalMag = Math.sqrt(totalDx * totalDx + totalDy * totalDy);
+                if (totalMag < 0.3) continue;
+
+                const clampedMag = Math.min(totalMag, maxLength);
+                const scale = clampedMag / totalMag;
+                drawVector(x, y, totalDx * scale, totalDy * scale, clampedMag, maxLength);
+            }
+        }
+    }
+
+    function waveDrawSource() {
+        // 물체 글로우
+        const grad = ctx.createRadialGradient(waveSource.x, waveSource.y, 4, waveSource.x, waveSource.y, 35);
+        grad.addColorStop(0, 'rgba(100, 220, 255, 0.9)');
+        grad.addColorStop(0.4, 'rgba(60, 160, 255, 0.3)');
+        grad.addColorStop(1, 'rgba(60, 160, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(waveSource.x, waveSource.y, 35, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 물체 본체
+        const bodyGrad = ctx.createRadialGradient(
+            waveSource.x - 3, waveSource.y - 3, 1,
+            waveSource.x, waveSource.y, 12
+        );
+        bodyGrad.addColorStop(0, '#bef');
+        bodyGrad.addColorStop(1, '#38bdf8');
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.arc(waveSource.x, waveSource.y, 12, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // ══════════════════════════════════════
+    //  메인 루프
+    // ══════════════════════════════════════
+
+    let lastTime = performance.now();
+
+    function animate(now) {
+        const dt = Math.min((now - lastTime) / 1000, 0.05);
+        lastTime = now;
+
+        // --- 중력우물 모드 ---
+        if (mode === 'well') {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, width, height);
+            wellDrawGrid();
+            wellParticles.forEach(pt => { pt.update(); pt.draw(); });
+            wellDrawCenter();
+            requestAnimationFrame(animate);
+            return;
+        }
+
+        // --- 벡터장 모드 ---
+        waveTime += dt * simSpeed;
+        waveEmit();
+
+        ctx.fillStyle = 'rgba(5, 5, 16, 0.15)';
+        ctx.fillRect(0, 0, width, height);
+        drawStars();
+        waveDrawRipples();
+        waveDrawVectorField();
+        waveDrawSource();
+
+        requestAnimationFrame(animate);
+    }
+
+    // 초기화: 중력우물 모드로 시작
+    wellInit();
+    document.getElementById('wellHint').style.display = 'block';
+    requestAnimationFrame(animate);
+</script>
+</body>
+</html>
