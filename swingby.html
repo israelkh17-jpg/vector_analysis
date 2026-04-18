@@ -318,43 +318,72 @@
     const canvas = document.getElementById('simCanvas');
     const ctx = canvas.getContext('2d');
 
-    let planet, craft, animId;
-    const G = 500;
+    let planet, craft, animId, initSpeed;
+    const G = 0.5;
+    const SUBSTEPS = 20;
+    const DT = 1 / (SUBSTEPS * 2.5);
+    const MAX_TRAIL = 1200;
 
     function resetSim() {
         if (animId) cancelAnimationFrame(animId);
-        planet = { x: 600, y: 200, vx: -1.5, vy: 0, mass: 1500, radius: 20 };
-        craft = { x: 750, y: 350, vx: -2.5, vy: -1.2, history: [] };
+        planet = { x: 700, y: 200, vx: -0.6, vy: 0, mass: 800, radius: 20 };
+        craft  = { x: 100, y: 320, vx:  1.0, vy: 0,    history: [] };
+        initSpeed = Math.sqrt(craft.vx**2 + craft.vy**2);
         update();
     }
 
+    function accel(cx, cy) {
+        const dx = planet.x - cx;
+        const dy = planet.y - cy;
+        let r2 = dx*dx + dy*dy;
+        const minR = planet.radius * 1.2;
+        if (r2 < minR*minR) r2 = minR*minR;
+        const r = Math.sqrt(r2);
+        const a = (G * planet.mass) / r2;
+        return [a * dx/r, a * dy/r];
+    }
+
     function update() {
-        let dx = planet.x - craft.x;
-        let dy = planet.y - craft.y;
-        let distSq = dx*dx + dy*dy;
-        let dist = Math.sqrt(distSq);
-
-        if (dist > planet.radius) {
-            let force = (G * planet.mass) / distSq;
-            let ax = force * (dx / dist);
-            let ay = force * (dy / dist);
-
-            craft.vx += ax;
-            craft.vy += ay;
-            craft.x += craft.vx;
-            craft.y += craft.vy;
-
-            planet.x += planet.vx;
-            planet.y += planet.vy;
-
-            craft.history.push({x: craft.x, y: craft.y});
+        for (let s = 0; s < SUBSTEPS; s++) {
+            // Velocity Verlet: 에너지 보존이 좋아 한 번의 깔끔한 쌍곡선 스윙바이가 됨
+            const [ax0, ay0] = accel(craft.x, craft.y);
+            craft.x += craft.vx * DT + 0.5 * ax0 * DT * DT;
+            craft.y += craft.vy * DT + 0.5 * ay0 * DT * DT;
+            planet.x += planet.vx * DT;
+            planet.y += planet.vy * DT;
+            const [ax1, ay1] = accel(craft.x, craft.y);
+            craft.vx += 0.5 * (ax0 + ax1) * DT;
+            craft.vy += 0.5 * (ay0 + ay1) * DT;
         }
+
+        craft.history.push({x: craft.x, y: craft.y});
+        if (craft.history.length > MAX_TRAIL) craft.history.shift();
+
+        const off = (o, pad) =>
+            o.x < -pad || o.x > canvas.width + pad ||
+            o.y < -pad || o.y > canvas.height + pad;
+        if (off(craft, 80) && off(planet, 80)) {
+            draw();
+            setTimeout(resetSim, 1200);
+            return;
+        }
+
         draw();
         animId = requestAnimationFrame(update);
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // top-down 좌표 격자
+        ctx.strokeStyle = 'rgba(74,144,226,0.06)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= canvas.width; x += 50) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+        }
+        for (let y = 0; y <= canvas.height; y += 50) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
 
         // 궤적
         if (craft.history.length > 1) {
@@ -399,11 +428,9 @@
         ctx.textAlign = 'left';
         ctx.fillText(`속력: ${speed}`, 20, 28);
 
-        // 초기 속력 비교
-        let initSpeed = Math.sqrt(2.5**2 + 1.2**2).toFixed(2);
         ctx.fillStyle = '#8899bb';
         ctx.font = '13px sans-serif';
-        ctx.fillText(`초기 속력: ${initSpeed}`, 20, 48);
+        ctx.fillText(`초기 속력: ${initSpeed.toFixed(2)}`, 20, 48);
     }
 
     resetSim();
